@@ -86,8 +86,8 @@ export default function Home() {
   );
 
   // Export handlers
-  const handleExportPDF = useCallback(() => {
-    if (state.pattern) exportPatternAsPDF(state.pattern, currentColors);
+  const handleExportPDF = useCallback(async () => {
+    if (state.pattern) await exportPatternAsPDF(state.pattern, currentColors);
   }, [state.pattern, currentColors]);
 
   const handleExportPNG = useCallback(() => {
