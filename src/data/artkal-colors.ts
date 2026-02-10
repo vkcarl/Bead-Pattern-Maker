@@ -2,8 +2,11 @@ import type { ArtkalColor } from '@/types';
 
 // Artkal C-series 5mm bead colors
 // Source: https://github.com/maxcleme/beadcolors (community-verified data)
+// Note: C01 White adjusted from Perlervault measurement (#EAEEF3) to perceptually
+// correct value (#F8F8F8). The original measurement skews blue-grey due to lighting
+// conditions, causing noticeable color shift on white/light areas.
 export const artkalColors: ArtkalColor[] = [
-  { id: "C01", name: "White", hex: "#EAEEF3", r: 234, g: 238, b: 243, series: "C" },
+  { id: "C01", name: "White", hex: "#F8F8F8", r: 248, g: 248, b: 248, series: "C" },
   { id: "C02", name: "Black", hex: "#292A2B", r: 41, g: 42, b: 43, series: "C" },
   { id: "C03", name: "Tangerine", hex: "#FFA630", r: 255, g: 166, b: 48, series: "C" },
   { id: "C04", name: "Yellow Orange", hex: "#E68739", r: 230, g: 135, b: 57, series: "C" },
