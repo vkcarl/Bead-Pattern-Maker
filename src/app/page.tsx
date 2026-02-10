@@ -26,6 +26,12 @@ export default function Home() {
   });
   const { onDrop, onDragOver, onFileSelect } = useImageUpload(dispatch);
 
+  // Scroll-based pan update (from native scrollbars)
+  const handlePanChange = useCallback(
+    (x: number, y: number) => dispatch({ type: 'SET_PAN', payload: { x, y } }),
+    [dispatch]
+  );
+
   // Convert image to bead pattern
   const handleConvert = useCallback(async () => {
     if (!state.originalImage) return;
@@ -185,6 +191,7 @@ export default function Home() {
                   onMouseDown={onMouseDown}
                   onMouseMove={onMouseMove}
                   onMouseUp={onMouseUp}
+                  onPanChange={handlePanChange}
                 />
               </div>
             </>

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface BoardConfigProps {
   width: number;
@@ -17,8 +17,41 @@ const PRESETS = [
   { label: '58×58', w: 58, h: 58 },
 ];
 
+function clamp(v: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, v));
+}
+
 export function BoardConfig({ width, height, hasImage, isProcessing, onSizeChange, onConvert }: BoardConfigProps) {
   const [isCustom, setIsCustom] = useState(false);
+  // Local string state so users can freely type/clear the input
+  const [localW, setLocalW] = useState(String(width));
+  const [localH, setLocalH] = useState(String(height));
+
+  // Sync external value → local when changed via presets
+  useEffect(() => { setLocalW(String(width)); }, [width]);
+  useEffect(() => { setLocalH(String(height)); }, [height]);
+
+  const commitWidth = () => {
+    const n = Number(localW);
+    if (!localW || isNaN(n)) {
+      setLocalW(String(width));
+      return;
+    }
+    const clamped = clamp(Math.round(n), 5, 200);
+    setLocalW(String(clamped));
+    onSizeChange(clamped, height);
+  };
+
+  const commitHeight = () => {
+    const n = Number(localH);
+    if (!localH || isNaN(n)) {
+      setLocalH(String(height));
+      return;
+    }
+    const clamped = clamp(Math.round(n), 5, 200);
+    setLocalH(String(clamped));
+    onSizeChange(width, clamped);
+  };
 
   const selectPreset = (w: number, h: number) => {
     setIsCustom(false);
@@ -57,8 +90,10 @@ export function BoardConfig({ width, height, hasImage, isProcessing, onSizeChang
             type="number"
             min={5}
             max={200}
-            value={width}
-            onChange={e => onSizeChange(Math.max(5, Math.min(200, Number(e.target.value))), height)}
+            value={localW}
+            onChange={e => setLocalW(e.target.value)}
+            onBlur={commitWidth}
+            onKeyDown={e => { if (e.key === 'Enter') commitWidth(); }}
             className="w-20 px-2 py-1 text-xs border rounded-md text-center"
           />
           <span className="text-gray-400 text-xs">×</span>
@@ -66,8 +101,10 @@ export function BoardConfig({ width, height, hasImage, isProcessing, onSizeChang
             type="number"
             min={5}
             max={200}
-            value={height}
-            onChange={e => onSizeChange(width, Math.max(5, Math.min(200, Number(e.target.value))))}
+            value={localH}
+            onChange={e => setLocalH(e.target.value)}
+            onBlur={commitHeight}
+            onKeyDown={e => { if (e.key === 'Enter') commitHeight(); }}
             className="w-20 px-2 py-1 text-xs border rounded-md text-center"
           />
         </div>

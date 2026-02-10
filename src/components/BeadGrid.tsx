@@ -19,9 +19,11 @@ interface BeadGridProps {
   onMouseDown: (e: React.MouseEvent) => void;
   onMouseMove: (e: React.MouseEvent) => void;
   onMouseUp: () => void;
+  onPanChange?: (x: number, y: number) => void;
 }
 
 const BASE_CELL_SIZE = 20;
+const SCROLL_PADDING = 40; // Extra space around the pattern
 
 export function BeadGrid({
   pattern,
@@ -37,43 +39,78 @@ export function BeadGrid({
   onMouseDown,
   onMouseMove,
   onMouseUp,
+  onPanChange,
 }: BeadGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isScrollSyncing = useRef(false);
+
+  const cellSize = BASE_CELL_SIZE * zoom;
+  const totalW = pattern.width * cellSize;
+  const totalH = pattern.height * cellSize;
+  // Content size with padding on all sides
+  const contentW = totalW + SCROLL_PADDING * 2;
+  const contentH = totalH + SCROLL_PADDING * 2;
+
+  // Sync panX/panY → scroll position
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+    isScrollSyncing.current = true;
+    scrollEl.scrollLeft = -panX + SCROLL_PADDING;
+    scrollEl.scrollTop = -panY + SCROLL_PADDING;
+    // Reset flag after browser processes the scroll
+    requestAnimationFrame(() => {
+      isScrollSyncing.current = false;
+    });
+  }, [panX, panY]);
+
+  // Handle native scroll → update pan
+  const handleScroll = useCallback(() => {
+    if (isScrollSyncing.current) return;
+    const scrollEl = scrollRef.current;
+    if (!scrollEl || !onPanChange) return;
+    const newPanX = -(scrollEl.scrollLeft - SCROLL_PADDING);
+    const newPanY = -(scrollEl.scrollTop - SCROLL_PADDING);
+    onPanChange(newPanX, newPanY);
+  }, [onPanChange]);
 
   // Render the grid to canvas
   const render = useCallback(() => {
     const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return;
+    const scrollEl = scrollRef.current;
+    if (!canvas || !scrollEl) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const rect = container.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    canvas.style.width = `${rect.width}px`;
-    canvas.style.height = `${rect.height}px`;
+    const viewW = scrollEl.clientWidth;
+    const viewH = scrollEl.clientHeight;
+    canvas.width = viewW * dpr;
+    canvas.height = viewH * dpr;
+    canvas.style.width = `${viewW}px`;
+    canvas.style.height = `${viewH}px`;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, rect.width, rect.height);
+    ctx.clearRect(0, 0, viewW, viewH);
 
     // Background
     ctx.fillStyle = '#f3f4f6';
-    ctx.fillRect(0, 0, rect.width, rect.height);
+    ctx.fillRect(0, 0, viewW, viewH);
+
+    // Derive offset from scroll position
+    const offsetX = -(scrollEl.scrollLeft - SCROLL_PADDING);
+    const offsetY = -(scrollEl.scrollTop - SCROLL_PADDING);
 
     ctx.save();
-    ctx.translate(panX, panY);
-
-    const cellSize = BASE_CELL_SIZE * zoom;
+    ctx.translate(offsetX, offsetY);
 
     // Viewport culling bounds
-    const startCol = Math.max(0, Math.floor(-panX / cellSize));
-    const startRow = Math.max(0, Math.floor(-panY / cellSize));
-    const endCol = Math.min(pattern.width, Math.ceil((rect.width - panX) / cellSize));
-    const endRow = Math.min(pattern.height, Math.ceil((rect.height - panY) / cellSize));
+    const startCol = Math.max(0, Math.floor(-offsetX / cellSize));
+    const startRow = Math.max(0, Math.floor(-offsetY / cellSize));
+    const endCol = Math.min(pattern.width, Math.ceil((viewW - offsetX) / cellSize));
+    const endRow = Math.min(pattern.height, Math.ceil((viewH - offsetY) / cellSize));
 
     // Draw beads
     for (let row = startRow; row < endRow; row++) {
@@ -142,7 +179,7 @@ export function BeadGrid({
     }
 
     ctx.restore();
-  }, [pattern, zoom, panX, panY, showGridLines, showBeadCodes]);
+  }, [pattern, zoom, panX, panY, cellSize, showGridLines, showBeadCodes]);
 
   // Re-render on state change
   useEffect(() => {
@@ -152,51 +189,67 @@ export function BeadGrid({
 
   // Resize observer
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
     const observer = new ResizeObserver(() => {
       requestAnimationFrame(render);
     });
-    observer.observe(container);
+    observer.observe(scrollEl);
     return () => observer.disconnect();
+  }, [render]);
+
+  // Re-render on scroll (for viewport culling)
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+    const onScroll = () => requestAnimationFrame(render);
+    scrollEl.addEventListener('scroll', onScroll, { passive: true });
+    return () => scrollEl.removeEventListener('scroll', onScroll);
   }, [render]);
 
   // Click handler - identify cell from coordinates
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       if (e.altKey) return; // Alt+click is pan
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+      const scrollEl = scrollRef.current;
+      if (!scrollEl) return;
 
-      const rect = canvas.getBoundingClientRect();
+      const rect = scrollEl.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
 
-      const cellSize = BASE_CELL_SIZE * zoom;
-      const col = Math.floor((mouseX - panX) / cellSize);
-      const row = Math.floor((mouseY - panY) / cellSize);
+      const offsetX = -(scrollEl.scrollLeft - SCROLL_PADDING);
+      const offsetY = -(scrollEl.scrollTop - SCROLL_PADDING);
+
+      const col = Math.floor((mouseX - offsetX) / cellSize);
+      const row = Math.floor((mouseY - offsetY) / cellSize);
 
       if (row >= 0 && row < pattern.height && col >= 0 && col < pattern.width) {
         onCellClick(row, col);
       }
     },
-    [zoom, panX, panY, pattern, onCellClick]
+    [cellSize, pattern, onCellClick]
   );
 
   return (
     <div
-      ref={containerRef}
-      className="w-full h-full overflow-hidden relative"
+      ref={scrollRef}
+      className="w-full h-full overflow-auto relative"
       onWheel={onWheel}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
       onMouseLeave={onMouseUp}
+      onScroll={handleScroll}
     >
+      {/* Spacer div to create scrollable area */}
+      <div style={{ width: contentW, height: contentH, pointerEvents: 'none' }} />
+      {/* Canvas stays fixed in viewport via sticky positioning */}
       <canvas
         ref={canvasRef}
         onClick={handleClick}
-        className={selectedTool === 'paint' ? 'cursor-crosshair' : 'cursor-default'}
+        className={`sticky top-0 left-0 ${selectedTool === 'paint' ? 'cursor-crosshair' : 'cursor-default'}`}
+        style={{ marginTop: -contentH }}
       />
     </div>
   );

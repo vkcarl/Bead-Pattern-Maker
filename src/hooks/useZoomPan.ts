@@ -15,20 +15,35 @@ export function useZoomPan({ zoom, panX, panY, dispatch }: UseZoomPanOptions) {
 
   const onWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
 
-    const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-    const newZoom = Math.max(0.3, Math.min(15, zoom * zoomFactor));
+    // Cmd/Ctrl + wheel → zoom (缩放)
+    if (e.metaKey || e.ctrlKey) {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
 
-    // Zoom centered on cursor
-    const scale = newZoom / zoom;
-    const newPanX = mouseX - scale * (mouseX - panX);
-    const newPanY = mouseY - scale * (mouseY - panY);
+      const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+      const newZoom = Math.max(0.3, Math.min(15, zoom * zoomFactor));
 
-    dispatch({ type: 'SET_ZOOM', payload: newZoom });
-    dispatch({ type: 'SET_PAN', payload: { x: newPanX, y: newPanY } });
+      // Zoom centered on cursor
+      const scale = newZoom / zoom;
+      const newPanX = mouseX - scale * (mouseX - panX);
+      const newPanY = mouseY - scale * (mouseY - panY);
+
+      dispatch({ type: 'SET_ZOOM', payload: newZoom });
+      dispatch({ type: 'SET_PAN', payload: { x: newPanX, y: newPanY } });
+      return;
+    }
+
+    // Shift + wheel → 左右移动
+    if (e.shiftKey) {
+      const delta = e.deltaY || e.deltaX;
+      dispatch({ type: 'SET_PAN', payload: { x: panX - delta, y: panY } });
+      return;
+    }
+
+    // Plain wheel → 上下移动
+    dispatch({ type: 'SET_PAN', payload: { x: panX, y: panY - e.deltaY } });
   }, [zoom, panX, panY, dispatch]);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
