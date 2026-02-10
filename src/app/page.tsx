@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { usePatternState } from '@/hooks/usePatternState';
 import { useZoomPan } from '@/hooks/useZoomPan';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { processImage } from '@/lib/image-processor';
 import { exportPatternAsPDF } from '@/lib/export-pdf';
 import { exportPatternAsPNG, exportPatternWithCodesPNG } from '@/lib/export-image';
+import { PaletteManager, setActivePaletteById } from '@/lib/palette';
 
 import { ImageUploader } from '@/components/ImageUploader';
 import { BoardConfig } from '@/components/BoardConfig';
@@ -15,6 +16,8 @@ import { BeadStats } from '@/components/BeadStats';
 import { Toolbar } from '@/components/Toolbar';
 import { ColorPicker } from '@/components/ColorPicker';
 import { ExportPanel } from '@/components/ExportPanel';
+import { PaletteSelector } from '@/components/PaletteSelector';
+import { PaletteImporter } from '@/components/PaletteImporter';
 
 export default function Home() {
   const { state, dispatch, canUndo, canRedo, undo, redo } = usePatternState();
@@ -26,9 +29,34 @@ export default function Home() {
   });
   const { onDrop, onDragOver, onFileSelect } = useImageUpload(dispatch);
 
+  // 色板导入弹窗状态
+  const [showImporter, setShowImporter] = useState(false);
+  // 用于触发色板列表刷新的 key
+  const [paletteRefreshKey, setPaletteRefreshKey] = useState(0);
+
+  // 获取当前色板的颜色数组
+  const currentPalette = useMemo(() => {
+    return PaletteManager.getPaletteById(state.currentPaletteId) || PaletteManager.getCurrentPalette();
+  }, [state.currentPaletteId]);
+
+  const currentColors = useMemo(() => currentPalette.colors, [currentPalette]);
+
+  // 切换色板时同步更新颜色匹配器
+  useEffect(() => {
+    setActivePaletteById(state.currentPaletteId);
+  }, [state.currentPaletteId]);
+
   // Scroll-based pan update (from native scrollbars)
   const handlePanChange = useCallback(
     (x: number, y: number) => dispatch({ type: 'SET_PAN', payload: { x, y } }),
+    [dispatch]
+  );
+
+  // 居中显示图案的回调
+  const handleRequestCenter = useCallback(
+    (centerX: number, centerY: number) => {
+      dispatch({ type: 'SET_PAN', payload: { x: centerX, y: centerY } });
+    },
     [dispatch]
   );
 
@@ -59,12 +87,23 @@ export default function Home() {
 
   // Export handlers
   const handleExportPDF = useCallback(() => {
-    if (state.pattern) exportPatternAsPDF(state.pattern);
-  }, [state.pattern]);
+    if (state.pattern) exportPatternAsPDF(state.pattern, currentColors);
+  }, [state.pattern, currentColors]);
 
   const handleExportPNG = useCallback(() => {
-    if (state.pattern) exportPatternWithCodesPNG(state.pattern);
-  }, [state.pattern]);
+    if (state.pattern) exportPatternWithCodesPNG(state.pattern, currentColors);
+  }, [state.pattern, currentColors]);
+
+  // 色板选择处理
+  const handleSelectPalette = useCallback((paletteId: string) => {
+    dispatch({ type: 'SET_PALETTE', payload: paletteId });
+  }, [dispatch]);
+
+  // 色板导入成功处理
+  const handleImportSuccess = useCallback((paletteId: string) => {
+    setPaletteRefreshKey(k => k + 1); // 触发色板列表刷新
+    dispatch({ type: 'SET_PALETTE', payload: paletteId });
+  }, [dispatch]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -95,12 +134,21 @@ export default function Home() {
         <h1 className="text-base font-semibold text-gray-800">
           拼豆图案转换器
         </h1>
-        <span className="text-xs text-gray-400">Artkal C 系列</span>
+        <span className="text-xs text-gray-400">{currentPalette.name}</span>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
         <aside className="w-72 bg-white border-r overflow-y-auto flex-shrink-0 p-4 space-y-5">
+          {/* Palette selector */}
+          <PaletteSelector
+            currentPaletteId={state.currentPaletteId}
+            onSelectPalette={handleSelectPalette}
+            onImportClick={() => setShowImporter(true)}
+            onDeletePalette={() => setPaletteRefreshKey(k => k + 1)}
+            refreshKey={paletteRefreshKey}
+          />
+
           {/* Upload section */}
           {!state.originalImage ? (
             <ImageUploader onDrop={onDrop} onDragOver={onDragOver} onFileSelect={onFileSelect} />
@@ -137,13 +185,14 @@ export default function Home() {
           {state.pattern && (
             <ColorPicker
               pattern={state.pattern}
+              colors={currentColors}
               selectedColorIndex={state.selectedColorIndex}
               onSelectColor={(idx) => dispatch({ type: 'SET_SELECTED_COLOR', payload: idx })}
             />
           )}
 
           {/* Bead stats */}
-          {state.pattern && <BeadStats pattern={state.pattern} />}
+          {state.pattern && <BeadStats pattern={state.pattern} colors={currentColors} />}
 
           {/* Export */}
           <ExportPanel
@@ -179,6 +228,7 @@ export default function Home() {
               <div className="flex-1 overflow-hidden">
                 <BeadGrid
                   pattern={state.pattern}
+                  colors={currentColors}
                   zoom={state.zoom}
                   panX={state.panX}
                   panY={state.panY}
@@ -192,6 +242,8 @@ export default function Home() {
                   onMouseMove={onMouseMove}
                   onMouseUp={onMouseUp}
                   onPanChange={handlePanChange}
+                  onRequestCenter={handleRequestCenter}
+                  shouldCenter={state.shouldCenter}
                 />
               </div>
             </>
@@ -208,6 +260,13 @@ export default function Home() {
           )}
         </main>
       </div>
+
+      {/* Palette importer modal */}
+      <PaletteImporter
+        isOpen={showImporter}
+        onClose={() => setShowImporter(false)}
+        onImportSuccess={handleImportSuccess}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 import { useReducer, useCallback } from 'react';
 import type { PatternState, PatternAction, Pattern } from '@/types';
+import { DEFAULT_PALETTE_ID } from '@/data/palettes';
 
 const MAX_HISTORY = 50;
 
@@ -19,6 +20,8 @@ const initialState: PatternState = {
   showGridLines: true,
   showBeadCodes: false,
   isProcessing: false,
+  shouldCenter: false, // 是否需要居中显示图案
+  currentPaletteId: DEFAULT_PALETTE_ID, // 当前选中的色板 ID
 };
 
 function patternReducer(state: PatternState, action: PatternAction): PatternState {
@@ -26,10 +29,11 @@ function patternReducer(state: PatternState, action: PatternAction): PatternStat
     case 'SET_IMAGE':
       return { ...state, originalImage: action.payload, pattern: null, history: [], historyIndex: -1 };
     case 'CLEAR_IMAGE':
-      return { ...initialState };
+      return { ...initialState, currentPaletteId: state.currentPaletteId };
     case 'GENERATE_PATTERN': {
       const newHistory = [action.payload];
-      return { ...state, pattern: action.payload, history: newHistory, historyIndex: 0, isProcessing: false, zoom: 1, panX: 0, panY: 0 };
+      // 生成新图案时，设置 shouldCenter 为 true，触发居中显示
+      return { ...state, pattern: action.payload, history: newHistory, historyIndex: 0, isProcessing: false, zoom: 1, panX: 0, panY: 0, shouldCenter: true };
     }
     case 'SET_CELL': {
       if (!state.pattern) return state;
@@ -54,9 +58,9 @@ function patternReducer(state: PatternState, action: PatternAction): PatternStat
       return { ...state, pattern: state.history[newIndex], historyIndex: newIndex };
     }
     case 'SET_ZOOM':
-      return { ...state, zoom: Math.max(0.3, Math.min(15, action.payload)) };
+      return { ...state, zoom: Math.max(0.1, Math.min(15, action.payload)) };
     case 'SET_PAN':
-      return { ...state, panX: action.payload.x, panY: action.payload.y };
+      return { ...state, panX: action.payload.x, panY: action.payload.y, shouldCenter: false };
     case 'SET_BOARD_SIZE':
       return { ...state, boardWidth: action.payload.width, boardHeight: action.payload.height };
     case 'SET_TOOL':
@@ -69,6 +73,16 @@ function patternReducer(state: PatternState, action: PatternAction): PatternStat
       return { ...state, showBeadCodes: !state.showBeadCodes };
     case 'SET_PROCESSING':
       return { ...state, isProcessing: action.payload };
+    case 'SET_PALETTE':
+      // 切换色板时，清除当前图案和历史记录，因为颜色索引会失效
+      return { 
+        ...state, 
+        currentPaletteId: action.payload,
+        pattern: null,
+        history: [],
+        historyIndex: -1,
+        selectedColorIndex: null,
+      };
     default:
       return state;
   }

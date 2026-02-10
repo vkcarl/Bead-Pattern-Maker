@@ -1,18 +1,18 @@
 'use client';
 import { useMemo } from 'react';
-import { artkalColors } from '@/data/artkal-colors';
-import type { Pattern, BeadCount } from '@/types';
+import type { Pattern, BeadCount, BeadColor } from '@/types';
 
 interface BeadStatsProps {
   pattern: Pattern;
+  colors: BeadColor[]; // 当前色板的颜色数组
 }
 
-export function BeadStats({ pattern }: BeadStatsProps) {
+export function BeadStats({ pattern, colors }: BeadStatsProps) {
   const stats: BeadCount[] = useMemo(() => {
     const counts = new Map<number, number>();
     for (const row of pattern.grid) {
       for (const colorIndex of row) {
-        if (colorIndex >= 0) {
+        if (colorIndex >= 0 && colorIndex < colors.length) {
           counts.set(colorIndex, (counts.get(colorIndex) || 0) + 1);
         }
       }
@@ -20,11 +20,11 @@ export function BeadStats({ pattern }: BeadStatsProps) {
     return Array.from(counts.entries())
       .map(([colorIndex, count]) => ({
         colorIndex,
-        color: artkalColors[colorIndex],
+        color: colors[colorIndex],
         count,
       }))
       .sort((a, b) => b.count - a.count);
-  }, [pattern]);
+  }, [pattern, colors]);
 
   const totalBeads = useMemo(() => stats.reduce((sum, s) => sum + s.count, 0), [stats]);
 

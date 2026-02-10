@@ -1,8 +1,11 @@
-import type { Pattern } from '@/types';
-import { artkalColors } from '@/data/artkal-colors';
+import type { Pattern, BeadColor } from '@/types';
 import { relativeLuminance } from '@/lib/color-convert';
+import { getCurrentPaletteColors } from '@/lib/palette';
 
-export function exportPatternAsPNG(pattern: Pattern): void {
+export function exportPatternAsPNG(pattern: Pattern, colors?: BeadColor[]): void {
+  // 使用传入的颜色数组或获取当前色板
+  const paletteColors = colors || getCurrentPaletteColors();
+  
   const cellSize = 20;
   const canvas = document.createElement('canvas');
   canvas.width = pattern.width * cellSize;
@@ -17,9 +20,9 @@ export function exportPatternAsPNG(pattern: Pattern): void {
   for (let row = 0; row < pattern.height; row++) {
     for (let col = 0; col < pattern.width; col++) {
       const colorIndex = pattern.grid[row][col];
-      if (colorIndex < 0) continue;
+      if (colorIndex < 0 || colorIndex >= paletteColors.length) continue;
 
-      const color = artkalColors[colorIndex];
+      const color = paletteColors[colorIndex];
       const x = col * cellSize;
       const y = row * cellSize;
       const cx = x + cellSize / 2;
@@ -71,7 +74,10 @@ export function exportPatternAsPNG(pattern: Pattern): void {
   }, 'image/png');
 }
 
-export function exportPatternWithCodesPNG(pattern: Pattern): void {
+export function exportPatternWithCodesPNG(pattern: Pattern, colors?: BeadColor[]): void {
+  // 使用传入的颜色数组或获取当前色板
+  const paletteColors = colors || getCurrentPaletteColors();
+  
   const cellSize = 30;
   const canvas = document.createElement('canvas');
   canvas.width = pattern.width * cellSize;
@@ -85,9 +91,9 @@ export function exportPatternWithCodesPNG(pattern: Pattern): void {
   for (let row = 0; row < pattern.height; row++) {
     for (let col = 0; col < pattern.width; col++) {
       const colorIndex = pattern.grid[row][col];
-      if (colorIndex < 0) continue;
+      if (colorIndex < 0 || colorIndex >= paletteColors.length) continue;
 
-      const color = artkalColors[colorIndex];
+      const color = paletteColors[colorIndex];
       const x = col * cellSize;
       const y = row * cellSize;
       const cx = x + cellSize / 2;

@@ -1,12 +1,12 @@
 'use client';
 
 import { useRef, useEffect, useCallback } from 'react';
-import { artkalColors } from '@/data/artkal-colors';
 import { relativeLuminance } from '@/lib/color-convert';
-import type { Pattern } from '@/types';
+import type { Pattern, BeadColor } from '@/types';
 
 interface BeadGridProps {
   pattern: Pattern;
+  colors: BeadColor[]; // 当前色板的颜色数组
   zoom: number;
   panX: number;
   panY: number;
@@ -20,13 +20,20 @@ interface BeadGridProps {
   onMouseMove: (e: React.MouseEvent) => void;
   onMouseUp: () => void;
   onPanChange?: (x: number, y: number) => void;
+  // 当需要居中显示时调用，传入计算好的居中 pan 值
+  onRequestCenter?: (centerX: number, centerY: number) => void;
+  // 是否需要居中（生成新图案时设为 true）
+  shouldCenter?: boolean;
 }
 
 const BASE_CELL_SIZE = 20;
-const SCROLL_PADDING = 40; // Extra space around the pattern
+// 无限画布：在图案周围添加大量虚拟空间，支持自由滚动
+// 这个值决定了图案在各个方向上可以滚动多远
+const CANVAS_PADDING = 2000;
 
 export function BeadGrid({
   pattern,
+  colors,
   zoom,
   panX,
   panY,
@@ -40,6 +47,8 @@ export function BeadGrid({
   onMouseMove,
   onMouseUp,
   onPanChange,
+  onRequestCenter,
+  shouldCenter,
 }: BeadGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -48,17 +57,21 @@ export function BeadGrid({
   const cellSize = BASE_CELL_SIZE * zoom;
   const totalW = pattern.width * cellSize;
   const totalH = pattern.height * cellSize;
-  // Content size with padding on all sides
-  const contentW = totalW + SCROLL_PADDING * 2;
-  const contentH = totalH + SCROLL_PADDING * 2;
+  
+  // 无限画布：内容尺寸 = 图案尺寸 + 两侧的虚拟空间
+  // 这样即使图案很小，也能在各个方向上自由滚动
+  const contentW = totalW + CANVAS_PADDING * 2;
+  const contentH = totalH + CANVAS_PADDING * 2;
 
   // Sync panX/panY → scroll position
+  // panX/panY 表示图案相对于视口的偏移
+  // scrollLeft/scrollTop 表示滚动条的位置
   useEffect(() => {
     const scrollEl = scrollRef.current;
     if (!scrollEl) return;
     isScrollSyncing.current = true;
-    scrollEl.scrollLeft = -panX + SCROLL_PADDING;
-    scrollEl.scrollTop = -panY + SCROLL_PADDING;
+    scrollEl.scrollLeft = -panX + CANVAS_PADDING;
+    scrollEl.scrollTop = -panY + CANVAS_PADDING;
     // Reset flag after browser processes the scroll
     requestAnimationFrame(() => {
       isScrollSyncing.current = false;
@@ -70,8 +83,8 @@ export function BeadGrid({
     if (isScrollSyncing.current) return;
     const scrollEl = scrollRef.current;
     if (!scrollEl || !onPanChange) return;
-    const newPanX = -(scrollEl.scrollLeft - SCROLL_PADDING);
-    const newPanY = -(scrollEl.scrollTop - SCROLL_PADDING);
+    const newPanX = -(scrollEl.scrollLeft - CANVAS_PADDING);
+    const newPanY = -(scrollEl.scrollTop - CANVAS_PADDING);
     onPanChange(newPanX, newPanY);
   }, [onPanChange]);
 
@@ -100,8 +113,8 @@ export function BeadGrid({
     ctx.fillRect(0, 0, viewW, viewH);
 
     // Derive offset from scroll position
-    const offsetX = -(scrollEl.scrollLeft - SCROLL_PADDING);
-    const offsetY = -(scrollEl.scrollTop - SCROLL_PADDING);
+    const offsetX = -(scrollEl.scrollLeft - CANVAS_PADDING);
+    const offsetY = -(scrollEl.scrollTop - CANVAS_PADDING);
 
     ctx.save();
     ctx.translate(offsetX, offsetY);
@@ -116,9 +129,9 @@ export function BeadGrid({
     for (let row = startRow; row < endRow; row++) {
       for (let col = startCol; col < endCol; col++) {
         const colorIndex = pattern.grid[row][col];
-        if (colorIndex < 0) continue;
+        if (colorIndex < 0 || colorIndex >= colors.length) continue;
 
-        const color = artkalColors[colorIndex];
+        const color = colors[colorIndex];
         const x = col * cellSize;
         const y = row * cellSize;
         const cx = x + cellSize / 2;
@@ -179,7 +192,7 @@ export function BeadGrid({
     }
 
     ctx.restore();
-  }, [pattern, zoom, panX, panY, cellSize, showGridLines, showBeadCodes]);
+  }, [pattern, colors, zoom, panX, panY, cellSize, showGridLines, showBeadCodes]);
 
   // Re-render on state change
   useEffect(() => {
@@ -197,6 +210,28 @@ export function BeadGrid({
     observer.observe(scrollEl);
     return () => observer.disconnect();
   }, [render]);
+
+  // 居中显示图案
+  // 当 shouldCenter 为 true 时，计算使图案居中的 pan 值并回调
+  useEffect(() => {
+    if (!shouldCenter || !onRequestCenter) return;
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+
+    // 等待 DOM 更新后获取实际视口尺寸
+    requestAnimationFrame(() => {
+      const viewW = scrollEl.clientWidth;
+      const viewH = scrollEl.clientHeight;
+      
+      // 计算使图案居中的 pan 值
+      // 居中意味着：图案中心 = 视口中心
+      // 图案左上角位置 = (视口宽度 - 图案宽度) / 2
+      const centerPanX = (viewW - totalW) / 2;
+      const centerPanY = (viewH - totalH) / 2;
+      
+      onRequestCenter(centerPanX, centerPanY);
+    });
+  }, [shouldCenter, onRequestCenter, totalW, totalH]);
 
   // Re-render on scroll (for viewport culling)
   useEffect(() => {
@@ -218,8 +253,8 @@ export function BeadGrid({
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
 
-      const offsetX = -(scrollEl.scrollLeft - SCROLL_PADDING);
-      const offsetY = -(scrollEl.scrollTop - SCROLL_PADDING);
+      const offsetX = -(scrollEl.scrollLeft - CANVAS_PADDING);
+      const offsetY = -(scrollEl.scrollTop - CANVAS_PADDING);
 
       const col = Math.floor((mouseX - offsetX) / cellSize);
       const row = Math.floor((mouseY - offsetY) / cellSize);

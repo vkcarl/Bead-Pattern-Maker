@@ -6,7 +6,7 @@
 拼豆图案转换器 (Bead Pattern Converter)
 
 ### 1.2 产品定位
-面向拼豆手工爱好者的浏览器端工具应用。用户上传任意图片，系统自动将其转换为 Artkal 拼豆图案，支持预览、手动编辑和导出打印。
+面向拼豆手工爱好者的浏览器端工具应用。用户上传任意图片，系统自动将其转换为拼豆图案，支持预览、手动编辑和导出打印。**支持多品牌色板切换和自定义色板导入。**
 
 ### 1.3 目标用户
 - 拼豆 / 像素珠手工爱好者
@@ -16,6 +16,7 @@
 ### 1.4 核心价值
 - 将任意图片自动转换为高质量拼豆图案，省去人工逐格配色的繁琐过程
 - 使用感知色差算法（CIEDE2000）确保颜色匹配准确
+- **支持多品牌色板（Artkal、Perler、Hama 等）和自定义色板导入**
 - 全程浏览器端运行，无需上传图片到服务器，保护隐私
 
 ---
@@ -31,7 +32,41 @@
 | 文件限制 | 仅限图片类型 (image/*) |
 | 上传后操作 | 左侧显示原图预览，可移除重新上传 |
 
-### 2.2 拼豆板尺寸配置
+### 2.2 色板管理（新增）
+
+| 项目 | 说明 |
+|------|------|
+| 内置色板 | Artkal C 系列 (174 色) |
+| 色板切换 | 下拉选择器，支持切换内置和自定义色板 |
+| 自定义导入 | 支持 JSON/CSV 格式导入用户自定义色板 |
+| 色板存储 | 用户导入的色板存储在 localStorage |
+| 色板删除 | 支持删除用户导入的色板（内置色板不可删除）|
+
+#### 支持的导入格式
+
+**JSON 格式：**
+```json
+[
+  { "id": "001", "name": "白色", "hex": "#FFFFFF" },
+  { "id": "002", "name": "黑色", "r": 0, "g": 0, "b": 0 }
+]
+```
+
+**CSV 格式：**
+```csv
+id,name,hex
+001,白色,#FFFFFF
+002,黑色,#000000
+```
+
+或：
+```csv
+id,name,r,g,b
+001,白色,255,255,255
+002,黑色,0,0,0
+```
+
+### 2.3 拼豆板尺寸配置
 
 | 项目 | 说明 |
 |------|------|
@@ -39,17 +74,17 @@
 | 自定义尺寸 | 宽/高各 5~200 颗，支持任意矩形 |
 | 默认值 | 29x29 |
 
-### 2.3 图片转换
+### 2.4 图片转换
 
 | 项目 | 说明 |
 |------|------|
 | 降采样算法 | 面积平均法 (Area-average resampling)，对每个目标格子内的所有源像素取加权平均 |
 | 透明度处理 | 透明像素按 alpha 权重混合，完全透明视为白色 |
 | 颜色匹配 | RGB → CIELAB → CIEDE2000 色差 → k-d 树最近邻搜索 |
-| 色板 | Artkal C 系列 5mm 拼豆，共 174 色 (C01-C157 + CE01-CE17) |
+| 色板 | **支持动态切换色板** |
 | 性能优化 | 6-bit 量化 RGB 缓存 (262,144 个 key)，避免重复计算 |
 
-### 2.4 图案预览
+### 2.5 图案预览
 
 | 项目 | 说明 |
 |------|------|
@@ -60,9 +95,9 @@
 | 平移 | Alt + 鼠标拖拽 或 鼠标中键拖拽 |
 | 网格线 | 可开关，显示每颗珠子的边界 |
 | 板分割线 | 每 29 颗珠子绘制加粗分割线，标记实际拼豆板边界 |
-| 珠子编号 | 可开关，在珠子上显示 Artkal 色号（缩放足够大时） |
+| 珠子编号 | 可开关，在珠子上显示色号（缩放足够大时） |
 
-### 2.5 手动编辑
+### 2.6 手动编辑
 
 | 项目 | 说明 |
 |------|------|
@@ -71,7 +106,7 @@
 | 调色板 | 支持搜索（按名称或编号），高亮已使用颜色 |
 | 撤销/重做 | Ctrl+Z 撤销 / Ctrl+Y 重做，最多 50 步历史 |
 
-### 2.6 用量统计
+### 2.7 用量统计
 
 | 项目 | 说明 |
 |------|------|
@@ -80,7 +115,7 @@
 | 汇总 | 显示总颜色数和总珠子数 |
 | 更新 | 编辑珠子后实时更新 |
 
-### 2.7 导出
+### 2.8 导出
 
 | 导出格式 | 说明 |
 |----------|------|
@@ -98,7 +133,7 @@
 | 首屏加载 | < 2s (生产构建) |
 | 58x58 图案转换 | < 1s |
 | Canvas 渲染帧率 | 缩放/平移时 ≥ 30fps |
-| 内存占用 | 174 色 k-d 树 + 量化缓存 < 5MB |
+| 内存占用 | k-d 树 + 量化缓存 < 5MB |
 
 ### 3.2 兼容性
 
@@ -133,12 +168,12 @@
 
 #### 颜色匹配流程
 ```
-源像素 RGB → sRGB 线性化 → XYZ (D65) → CIELAB → CIEDE2000 色差 → k-d 树最近邻 → Artkal 色号
+源像素 RGB → sRGB 线性化 → XYZ (D65) → CIELAB → CIEDE2000 色差 → k-d 树最近邻 → 色号
 ```
 
 #### 关键选型理由
 - **CIEDE2000 vs RGB 欧氏距离**: RGB 距离在蓝紫色系严重失准，CIEDE2000 是 CIE 推荐的感知色差标准
-- **k-d 树 vs 暴力搜索**: 174 色 O(log n) vs O(n)，单次匹配快 ~7 倍
+- **k-d 树 vs 暴力搜索**: O(log n) vs O(n)，单次匹配快 ~7 倍
 - **Canvas vs DOM**: 58x58 = 3364 个珠子，DOM 节点方案渲染性能不可接受
 
 ### 4.3 项目结构
@@ -156,17 +191,26 @@ src/
 │   ├── ColorPicker.tsx    # 调色板选择器
 │   ├── ExportPanel.tsx    # 导出面板
 │   ├── ImageUploader.tsx  # 图片上传
+│   ├── PaletteSelector.tsx# 色板选择器（新增）
+│   ├── PaletteImporter.tsx# 色板导入组件（新增）
 │   └── Toolbar.tsx        # 工具栏
 ├── data/
-│   └── artkal-colors.ts   # 174 色 Artkal 数据
+│   ├── palettes/          # 色板数据目录（新增）
+│   │   ├── index.ts       # 色板统一导出
+│   │   └── artkal-c.ts    # Artkal C 系列数据
+│   └── artkal-colors.ts   # 向后兼容层
 ├── hooks/
 │   ├── usePatternState.ts # useReducer 状态 + 撤销重做
 │   ├── useZoomPan.ts      # 缩放平移逻辑
 │   └── useImageUpload.ts  # 文件上传逻辑
 ├── lib/
+│   ├── palette/           # 色板管理模块（新增）
+│   │   ├── index.ts       # 模块导出
+│   │   ├── palette-manager.ts # 色板管理器
+│   │   └── palette-parser.ts  # 色板解析器
 │   ├── color-convert.ts   # RGB → Lab 转换
 │   ├── color-diff.ts      # CIEDE2000 算法
-│   ├── color-match.ts     # 颜色匹配 + 缓存
+│   ├── color-match.ts     # 颜色匹配 + 动态色板支持
 │   ├── kd-tree.ts         # Lab 空间 k-d 树
 │   ├── image-processor.ts # 图片降采样 + 量化
 │   ├── export-pdf.ts      # PDF 导出
@@ -182,20 +226,32 @@ src/
 ### 5.1 核心类型
 
 ```typescript
+// 通用珠子颜色定义
+interface BeadColor {
+  id: string;           // 色号，如 "C01", "P01"
+  name: string;         // 颜色名称
+  hex: string;          // 十六进制色值
+  r: number; g: number; b: number;
+  category?: string;    // 可选分类
+  series?: string;      // 可选系列
+}
+
+// 色板定义
+interface ColorPalette {
+  id: string;           // 色板唯一标识
+  name: string;         // 显示名称
+  brand: string;        // 品牌名
+  description?: string; // 描述
+  colors: BeadColor[];  // 颜色列表
+  isBuiltIn: boolean;   // 是否内置
+  createdAt?: number;   // 创建时间
+}
+
 // 图案数据
 interface Pattern {
   width: number;          // 列数
   height: number;         // 行数
   grid: number[][];       // grid[row][col] = 色板索引 (-1 = 空)
-}
-
-// Artkal 颜色
-interface ArtkalColor {
-  id: string;             // 编号，如 "C01"
-  name: string;           // 名称，如 "White"
-  hex: string;            // 十六进制色值
-  r: number; g: number; b: number;
-  series: string;         // "C" 或 "CE"
 }
 
 // 应用状态
@@ -214,6 +270,7 @@ interface PatternState {
   showGridLines: boolean;
   showBeadCodes: boolean;
   isProcessing: boolean;
+  currentPaletteId: string;  // 当前色板 ID
 }
 ```
 
@@ -221,7 +278,7 @@ interface PatternState {
 
 ## 6. 未来迭代方向（不在当前版本范围内）
 
-- 支持 Perler、Hama 等其他品牌色板
+- ~~支持 Perler、Hama 等其他品牌色板~~ ✅ 已支持通过导入功能添加
 - 多图层支持
 - 图案分享（生成可分享链接）
 - 移动端触控优化

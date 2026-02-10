@@ -1,12 +1,12 @@
 import { jsPDF } from 'jspdf';
-import type { Pattern, BeadCount } from '@/types';
-import { artkalColors } from '@/data/artkal-colors';
+import type { Pattern, BeadCount, BeadColor } from '@/types';
+import { getCurrentPaletteColors } from '@/lib/palette';
 
-function computeStats(pattern: Pattern): BeadCount[] {
+function computeStats(pattern: Pattern, colors: BeadColor[]): BeadCount[] {
   const counts = new Map<number, number>();
   for (const row of pattern.grid) {
     for (const colorIndex of row) {
-      if (colorIndex >= 0) {
+      if (colorIndex >= 0 && colorIndex < colors.length) {
         counts.set(colorIndex, (counts.get(colorIndex) || 0) + 1);
       }
     }
@@ -14,13 +14,16 @@ function computeStats(pattern: Pattern): BeadCount[] {
   return Array.from(counts.entries())
     .map(([colorIndex, count]) => ({
       colorIndex,
-      color: artkalColors[colorIndex],
+      color: colors[colorIndex],
       count,
     }))
     .sort((a, b) => b.count - a.count);
 }
 
-export function exportPatternAsPDF(pattern: Pattern): void {
+export function exportPatternAsPDF(pattern: Pattern, colors?: BeadColor[]): void {
+  // 使用传入的颜色数组或获取当前色板
+  const paletteColors = colors || getCurrentPaletteColors();
+  
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -30,7 +33,7 @@ export function exportPatternAsPDF(pattern: Pattern): void {
   doc.setFontSize(14);
   doc.text(`Bead Pattern (${pattern.width} x ${pattern.height})`, margin, margin + 5);
   doc.setFontSize(8);
-  doc.text('Artkal C-series', margin, margin + 10);
+  doc.text(`${paletteColors.length} colors palette`, margin, margin + 10);
 
   // Calculate cell size to fit page
   const availW = pageW - 2 * margin;
@@ -46,9 +49,9 @@ export function exportPatternAsPDF(pattern: Pattern): void {
   for (let row = 0; row < pattern.height; row++) {
     for (let col = 0; col < pattern.width; col++) {
       const colorIndex = pattern.grid[row][col];
-      if (colorIndex < 0) continue;
+      if (colorIndex < 0 || colorIndex >= paletteColors.length) continue;
 
-      const color = artkalColors[colorIndex];
+      const color = paletteColors[colorIndex];
       const x = offsetX + col * cellSize;
       const y = offsetY + row * cellSize;
 
@@ -96,7 +99,7 @@ export function exportPatternAsPDF(pattern: Pattern): void {
   doc.setFontSize(12);
   doc.text('Color Legend', margin, margin + 5);
 
-  const stats = computeStats(pattern);
+  const stats = computeStats(pattern, paletteColors);
   const startY = margin + 12;
   const rowH = 5;
   const colWidths = { swatch: 5, id: 12, name: 45, count: 15 };

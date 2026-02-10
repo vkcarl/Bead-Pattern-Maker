@@ -23,7 +23,7 @@ export function useZoomPan({ zoom, panX, panY, dispatch }: UseZoomPanOptions) {
       const mouseY = e.clientY - rect.top;
 
       const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-      const newZoom = Math.max(0.3, Math.min(15, zoom * zoomFactor));
+      const newZoom = Math.max(0.1, Math.min(15, zoom * zoomFactor));
 
       // Zoom centered on cursor
       const scale = newZoom / zoom;

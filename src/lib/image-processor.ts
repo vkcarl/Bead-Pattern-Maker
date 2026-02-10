@@ -1,5 +1,5 @@
 import type { Pattern, RGB } from '@/types';
-import { findNearestArtkalColor } from './color-match';
+import { findNearestColor } from './color-match';
 
 // Area-average downsampling: averages all source pixels that map to each target pixel
 function downsample(
@@ -80,9 +80,9 @@ export function processImage(
         targetHeight
       );
 
-      // Map each pixel to nearest Artkal color
+      // Map each pixel to nearest color in current palette
       const grid: number[][] = rgbGrid.map((row) =>
-        row.map((pixel) => findNearestArtkalColor(pixel.r, pixel.g, pixel.b))
+        row.map((pixel) => findNearestColor(pixel.r, pixel.g, pixel.b))
       );
 
       resolve({ width: targetWidth, height: targetHeight, grid });

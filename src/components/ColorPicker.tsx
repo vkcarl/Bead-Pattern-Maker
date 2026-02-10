@@ -1,15 +1,15 @@
 'use client';
 import { useState, useMemo } from 'react';
-import { artkalColors } from '@/data/artkal-colors';
-import type { Pattern } from '@/types';
+import type { Pattern, BeadColor } from '@/types';
 
 interface ColorPickerProps {
   pattern: Pattern | null;
+  colors: BeadColor[]; // 当前色板的颜色数组
   selectedColorIndex: number | null;
   onSelectColor: (index: number) => void;
 }
 
-export function ColorPicker({ pattern, selectedColorIndex, onSelectColor }: ColorPickerProps) {
+export function ColorPicker({ pattern, colors, selectedColorIndex, onSelectColor }: ColorPickerProps) {
   const [search, setSearch] = useState('');
 
   const usedColorIndices = useMemo(() => {
@@ -17,21 +17,21 @@ export function ColorPicker({ pattern, selectedColorIndex, onSelectColor }: Colo
     const used = new Set<number>();
     for (const row of pattern.grid) {
       for (const idx of row) {
-        if (idx >= 0) used.add(idx);
+        if (idx >= 0 && idx < colors.length) used.add(idx);
       }
     }
     return used;
-  }, [pattern]);
+  }, [pattern, colors.length]);
 
   const filteredColors = useMemo(() => {
-    if (!search) return artkalColors;
+    if (!search) return colors;
     const q = search.toLowerCase();
-    return artkalColors.filter(c => c.id.toLowerCase().includes(q) || c.name.toLowerCase().includes(q));
-  }, [search]);
+    return colors.filter(c => c.id.toLowerCase().includes(q) || c.name.toLowerCase().includes(q));
+  }, [search, colors]);
 
   const usedColors = useMemo(() => {
-    return artkalColors.filter((_, i) => usedColorIndices.has(i));
-  }, [usedColorIndices]);
+    return colors.filter((_, i) => usedColorIndices.has(i));
+  }, [colors, usedColorIndices]);
 
   return (
     <div className="space-y-2">
@@ -48,7 +48,7 @@ export function ColorPicker({ pattern, selectedColorIndex, onSelectColor }: Colo
           <p className="text-xs text-gray-400 mb-1">已使用</p>
           <div className="flex flex-wrap gap-1">
             {usedColors.map(c => {
-              const idx = artkalColors.indexOf(c);
+              const idx = colors.indexOf(c);
               return (
                 <button
                   key={c.id}
@@ -68,7 +68,7 @@ export function ColorPicker({ pattern, selectedColorIndex, onSelectColor }: Colo
         {!search && <p className="text-xs text-gray-400 mb-1">全部颜色</p>}
         <div className="flex flex-wrap gap-1 max-h-48 overflow-y-auto">
           {filteredColors.map(c => {
-            const idx = artkalColors.indexOf(c);
+            const idx = colors.indexOf(c);
             return (
               <button
                 key={c.id}
