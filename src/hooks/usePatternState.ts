@@ -1,0 +1,87 @@
+'use client';
+import { useReducer, useCallback } from 'react';
+import type { PatternState, PatternAction, Pattern } from '@/types';
+
+const MAX_HISTORY = 50;
+
+const initialState: PatternState = {
+  originalImage: null,
+  pattern: null,
+  history: [],
+  historyIndex: -1,
+  boardWidth: 29,
+  boardHeight: 29,
+  zoom: 1,
+  panX: 0,
+  panY: 0,
+  selectedTool: 'select',
+  selectedColorIndex: null,
+  showGridLines: true,
+  showBeadCodes: false,
+  isProcessing: false,
+};
+
+function patternReducer(state: PatternState, action: PatternAction): PatternState {
+  switch (action.type) {
+    case 'SET_IMAGE':
+      return { ...state, originalImage: action.payload, pattern: null, history: [], historyIndex: -1 };
+    case 'CLEAR_IMAGE':
+      return { ...initialState };
+    case 'GENERATE_PATTERN': {
+      const newHistory = [action.payload];
+      return { ...state, pattern: action.payload, history: newHistory, historyIndex: 0, isProcessing: false, zoom: 1, panX: 0, panY: 0 };
+    }
+    case 'SET_CELL': {
+      if (!state.pattern) return state;
+      const { row, col, colorIndex } = action.payload;
+      if (state.pattern.grid[row][col] === colorIndex) return state;
+      const newGrid = state.pattern.grid.map(r => [...r]);
+      newGrid[row][col] = colorIndex;
+      const newPattern: Pattern = { ...state.pattern, grid: newGrid };
+      const truncatedHistory = state.history.slice(0, state.historyIndex + 1);
+      truncatedHistory.push(newPattern);
+      if (truncatedHistory.length > MAX_HISTORY) truncatedHistory.shift();
+      return { ...state, pattern: newPattern, history: truncatedHistory, historyIndex: truncatedHistory.length - 1 };
+    }
+    case 'UNDO': {
+      if (state.historyIndex <= 0) return state;
+      const newIndex = state.historyIndex - 1;
+      return { ...state, pattern: state.history[newIndex], historyIndex: newIndex };
+    }
+    case 'REDO': {
+      if (state.historyIndex >= state.history.length - 1) return state;
+      const newIndex = state.historyIndex + 1;
+      return { ...state, pattern: state.history[newIndex], historyIndex: newIndex };
+    }
+    case 'SET_ZOOM':
+      return { ...state, zoom: Math.max(0.3, Math.min(15, action.payload)) };
+    case 'SET_PAN':
+      return { ...state, panX: action.payload.x, panY: action.payload.y };
+    case 'SET_BOARD_SIZE':
+      return { ...state, boardWidth: action.payload.width, boardHeight: action.payload.height };
+    case 'SET_TOOL':
+      return { ...state, selectedTool: action.payload };
+    case 'SET_SELECTED_COLOR':
+      return { ...state, selectedColorIndex: action.payload, selectedTool: 'paint' };
+    case 'TOGGLE_GRID_LINES':
+      return { ...state, showGridLines: !state.showGridLines };
+    case 'TOGGLE_BEAD_CODES':
+      return { ...state, showBeadCodes: !state.showBeadCodes };
+    case 'SET_PROCESSING':
+      return { ...state, isProcessing: action.payload };
+    default:
+      return state;
+  }
+}
+
+export function usePatternState() {
+  const [state, dispatch] = useReducer(patternReducer, initialState);
+
+  const canUndo = state.historyIndex > 0;
+  const canRedo = state.historyIndex < state.history.length - 1;
+
+  const undo = useCallback(() => dispatch({ type: 'UNDO' }), []);
+  const redo = useCallback(() => dispatch({ type: 'REDO' }), []);
+
+  return { state, dispatch, canUndo, canRedo, undo, redo };
+}
