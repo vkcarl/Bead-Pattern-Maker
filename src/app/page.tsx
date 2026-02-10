@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { usePatternState } from '@/hooks/usePatternState';
 import { useZoomPan } from '@/hooks/useZoomPan';
 import { useImageUpload } from '@/hooks/useImageUpload';
@@ -21,11 +21,12 @@ import { PaletteImporter } from '@/components/PaletteImporter';
 
 export default function Home() {
   const { state, dispatch, canUndo, canRedo, undo, redo } = usePatternState();
+  // scrollRef 需要在这里创建，以便 useZoomPan 和 BeadGrid 共享
+  const scrollRef = useRef<HTMLDivElement>(null);
   const { onWheel, onMouseDown, onMouseMove, onMouseUp } = useZoomPan({
     zoom: state.zoom,
-    panX: state.panX,
-    panY: state.panY,
     dispatch,
+    scrollRef,
   });
   const { onDrop, onDragOver, onFileSelect } = useImageUpload(dispatch);
 
@@ -46,16 +47,10 @@ export default function Home() {
     setActivePaletteById(state.currentPaletteId);
   }, [state.currentPaletteId]);
 
-  // Scroll-based pan update (from native scrollbars)
-  const handlePanChange = useCallback(
-    (x: number, y: number) => dispatch({ type: 'SET_PAN', payload: { x, y } }),
-    [dispatch]
-  );
-
   // 居中显示图案的回调
-  const handleRequestCenter = useCallback(
-    (centerX: number, centerY: number) => {
-      dispatch({ type: 'SET_PAN', payload: { x: centerX, y: centerY } });
+  const handleCentered = useCallback(
+    () => {
+      dispatch({ type: 'CLEAR_SHOULD_CENTER' });
     },
     [dispatch]
   );
@@ -217,7 +212,18 @@ export default function Home() {
                 onZoomOut={() => dispatch({ type: 'SET_ZOOM', payload: state.zoom / 1.25 })}
                 onZoomReset={() => {
                   dispatch({ type: 'SET_ZOOM', payload: 1 });
-                  dispatch({ type: 'SET_PAN', payload: { x: 0, y: 0 } });
+                  // 重置时触发居中
+                  const scrollEl = scrollRef.current;
+                  if (scrollEl) {
+                    const CANVAS_PADDING = 2000;
+                    const cellSize = 20; // BASE_CELL_SIZE
+                    const totalW = state.pattern!.width * cellSize;
+                    const totalH = state.pattern!.height * cellSize;
+                    const viewW = scrollEl.clientWidth;
+                    const viewH = scrollEl.clientHeight;
+                    scrollEl.scrollLeft = CANVAS_PADDING - (viewW - totalW) / 2;
+                    scrollEl.scrollTop = CANVAS_PADDING - (viewH - totalH) / 2;
+                  }
                 }}
                 onUndo={undo}
                 onRedo={redo}
@@ -230,8 +236,6 @@ export default function Home() {
                   pattern={state.pattern}
                   colors={currentColors}
                   zoom={state.zoom}
-                  panX={state.panX}
-                  panY={state.panY}
                   showGridLines={state.showGridLines}
                   showBeadCodes={state.showBeadCodes}
                   selectedTool={state.selectedTool}
@@ -241,9 +245,9 @@ export default function Home() {
                   onMouseDown={onMouseDown}
                   onMouseMove={onMouseMove}
                   onMouseUp={onMouseUp}
-                  onPanChange={handlePanChange}
-                  onRequestCenter={handleRequestCenter}
                   shouldCenter={state.shouldCenter}
+                  onCentered={handleCentered}
+                  scrollRef={scrollRef}
                 />
               </div>
             </>

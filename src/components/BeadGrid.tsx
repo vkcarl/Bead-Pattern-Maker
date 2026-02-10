@@ -1,42 +1,39 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, RefObject } from 'react';
 import { relativeLuminance } from '@/lib/color-convert';
 import type { Pattern, BeadColor } from '@/types';
+import { zoomMousePosition } from '@/hooks/useZoomPan';
 
 interface BeadGridProps {
   pattern: Pattern;
   colors: BeadColor[]; // 当前色板的颜色数组
   zoom: number;
-  panX: number;
-  panY: number;
   showGridLines: boolean;
   showBeadCodes: boolean;
   selectedTool: 'select' | 'paint';
   selectedColorIndex: number | null;
   onCellClick: (row: number, col: number) => void;
-  onWheel: (e: React.WheelEvent) => void;
+  onWheel: (e: WheelEvent) => void; // 改为原生 WheelEvent
   onMouseDown: (e: React.MouseEvent) => void;
   onMouseMove: (e: React.MouseEvent) => void;
   onMouseUp: () => void;
-  onPanChange?: (x: number, y: number) => void;
-  // 当需要居中显示时调用，传入计算好的居中 pan 值
-  onRequestCenter?: (centerX: number, centerY: number) => void;
-  // 是否需要居中（生成新图案时设为 true）
+  // 当需要居中显示时设为 true
   shouldCenter?: boolean;
+  // 居中完成后的回调
+  onCentered?: () => void;
+  // 从外部传入的 scrollRef，以便与 useZoomPan 共享
+  scrollRef: RefObject<HTMLDivElement | null>;
 }
 
 const BASE_CELL_SIZE = 20;
 // 无限画布：在图案周围添加大量虚拟空间，支持自由滚动
-// 这个值决定了图案在各个方向上可以滚动多远
 const CANVAS_PADDING = 2000;
 
 export function BeadGrid({
   pattern,
   colors,
   zoom,
-  panX,
-  panY,
   showGridLines,
   showBeadCodes,
   selectedTool,
@@ -46,47 +43,23 @@ export function BeadGrid({
   onMouseDown,
   onMouseMove,
   onMouseUp,
-  onPanChange,
-  onRequestCenter,
   shouldCenter,
+  onCentered,
+  scrollRef,
 }: BeadGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const isScrollSyncing = useRef(false);
+  // 保存上一次的 zoom 值，用于检测 zoom 变化
+  const prevZoomRef = useRef(zoom);
+  // 标记是否正在进行缩放，用于跳过 scroll 事件导致的渲染
+  const isZoomingRef = useRef(false);
 
   const cellSize = BASE_CELL_SIZE * zoom;
   const totalW = pattern.width * cellSize;
   const totalH = pattern.height * cellSize;
   
   // 无限画布：内容尺寸 = 图案尺寸 + 两侧的虚拟空间
-  // 这样即使图案很小，也能在各个方向上自由滚动
   const contentW = totalW + CANVAS_PADDING * 2;
   const contentH = totalH + CANVAS_PADDING * 2;
-
-  // Sync panX/panY → scroll position
-  // panX/panY 表示图案相对于视口的偏移
-  // scrollLeft/scrollTop 表示滚动条的位置
-  useEffect(() => {
-    const scrollEl = scrollRef.current;
-    if (!scrollEl) return;
-    isScrollSyncing.current = true;
-    scrollEl.scrollLeft = -panX + CANVAS_PADDING;
-    scrollEl.scrollTop = -panY + CANVAS_PADDING;
-    // Reset flag after browser processes the scroll
-    requestAnimationFrame(() => {
-      isScrollSyncing.current = false;
-    });
-  }, [panX, panY]);
-
-  // Handle native scroll → update pan
-  const handleScroll = useCallback(() => {
-    if (isScrollSyncing.current) return;
-    const scrollEl = scrollRef.current;
-    if (!scrollEl || !onPanChange) return;
-    const newPanX = -(scrollEl.scrollLeft - CANVAS_PADDING);
-    const newPanY = -(scrollEl.scrollTop - CANVAS_PADDING);
-    onPanChange(newPanX, newPanY);
-  }, [onPanChange]);
 
   // Render the grid to canvas
   const render = useCallback(() => {
@@ -112,7 +85,7 @@ export function BeadGrid({
     ctx.fillStyle = '#f3f4f6';
     ctx.fillRect(0, 0, viewW, viewH);
 
-    // Derive offset from scroll position
+    // 从滚动位置计算偏移量
     const offsetX = -(scrollEl.scrollLeft - CANVAS_PADDING);
     const offsetY = -(scrollEl.scrollTop - CANVAS_PADDING);
 
@@ -192,10 +165,79 @@ export function BeadGrid({
     }
 
     ctx.restore();
-  }, [pattern, colors, zoom, panX, panY, cellSize, showGridLines, showBeadCodes]);
+  }, [pattern, colors, zoom, cellSize, showGridLines, showBeadCodes, scrollRef]);
 
-  // Re-render on state change
+  // 当 zoom 变化时，调整滚动位置以保持鼠标指向的点不变
   useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+
+    const prevZoom = prevZoomRef.current;
+    
+    // 如果 zoom 没有变化，跳过
+    if (prevZoom === zoom) return;
+
+    // 标记正在缩放
+    isZoomingRef.current = true;
+
+    const scale = zoom / prevZoom;
+
+    // 获取当前滚动位置和视口尺寸
+    const scrollLeft = scrollEl.scrollLeft;
+    const scrollTop = scrollEl.scrollTop;
+    const viewW = scrollEl.clientWidth;
+    const viewH = scrollEl.clientHeight;
+
+    // 判断是否有鼠标位置（用户通过滚轮缩放）
+    // 如果有鼠标位置，以鼠标为中心缩放；否则以视口中心缩放
+    let anchorX: number;
+    let anchorY: number;
+    
+    if (zoomMousePosition.isSet) {
+      // 使用鼠标位置作为锚点
+      anchorX = zoomMousePosition.x;
+      anchorY = zoomMousePosition.y;
+      // 重置标记
+      zoomMousePosition.isSet = false;
+    } else {
+      // 使用视口中心作为锚点（例如通过按钮缩放）
+      anchorX = viewW / 2;
+      anchorY = viewH / 2;
+    }
+
+    // 锚点相对于内容原点的坐标（当前 zoom 级别）
+    const contentX = scrollLeft + anchorX - CANVAS_PADDING;
+    const contentY = scrollTop + anchorY - CANVAS_PADDING;
+
+    // 缩放后锚点的新坐标
+    const newContentX = contentX * scale;
+    const newContentY = contentY * scale;
+
+    // 计算新的滚动位置，使锚点保持在同一视口位置
+    const newScrollLeft = newContentX - anchorX + CANVAS_PADDING;
+    const newScrollTop = newContentY - anchorY + CANVAS_PADDING;
+
+    // 更新 prevZoomRef
+    prevZoomRef.current = zoom;
+
+    // 设置滚动位置
+    scrollEl.scrollLeft = newScrollLeft;
+    scrollEl.scrollTop = newScrollTop;
+    
+    // 渲染新内容
+    render();
+    
+    // 延迟重置缩放标记
+    setTimeout(() => {
+      isZoomingRef.current = false;
+    }, 50);
+  }, [zoom, scrollRef, render]);
+
+  // Re-render on state change (but not on zoom change, which is handled above)
+  useEffect(() => {
+    // 如果正在缩放，跳过（由 zoom effect 处理渲染）
+    if (isZoomingRef.current) return;
+    
     const animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
   }, [render]);
@@ -209,12 +251,11 @@ export function BeadGrid({
     });
     observer.observe(scrollEl);
     return () => observer.disconnect();
-  }, [render]);
+  }, [render, scrollRef]);
 
   // 居中显示图案
-  // 当 shouldCenter 为 true 时，计算使图案居中的 pan 值并回调
   useEffect(() => {
-    if (!shouldCenter || !onRequestCenter) return;
+    if (!shouldCenter || !onCentered) return;
     const scrollEl = scrollRef.current;
     if (!scrollEl) return;
 
@@ -223,24 +264,50 @@ export function BeadGrid({
       const viewW = scrollEl.clientWidth;
       const viewH = scrollEl.clientHeight;
       
-      // 计算使图案居中的 pan 值
+      // 计算使图案居中的滚动位置
       // 居中意味着：图案中心 = 视口中心
-      // 图案左上角位置 = (视口宽度 - 图案宽度) / 2
-      const centerPanX = (viewW - totalW) / 2;
-      const centerPanY = (viewH - totalH) / 2;
+      // scrollLeft = CANVAS_PADDING - (viewW - totalW) / 2
+      const centerScrollLeft = CANVAS_PADDING - (viewW - totalW) / 2;
+      const centerScrollTop = CANVAS_PADDING - (viewH - totalH) / 2;
       
-      onRequestCenter(centerPanX, centerPanY);
+      scrollEl.scrollLeft = centerScrollLeft;
+      scrollEl.scrollTop = centerScrollTop;
+      
+      // 通知居中完成
+      onCentered();
+      
+      // 居中后重新渲染
+      requestAnimationFrame(render);
     });
-  }, [shouldCenter, onRequestCenter, totalW, totalH]);
+  }, [shouldCenter, onCentered, totalW, totalH, scrollRef, render]);
 
   // Re-render on scroll (for viewport culling)
   useEffect(() => {
     const scrollEl = scrollRef.current;
     if (!scrollEl) return;
-    const onScroll = () => requestAnimationFrame(render);
+    const onScroll = () => {
+      // 如果正在缩放，跳过
+      if (isZoomingRef.current) return;
+      requestAnimationFrame(render);
+    };
     scrollEl.addEventListener('scroll', onScroll, { passive: true });
     return () => scrollEl.removeEventListener('scroll', onScroll);
-  }, [render]);
+  }, [render, scrollRef]);
+
+  // 添加 non-passive wheel 事件监听器，以便能够 preventDefault
+  // React 的 onWheel 是 passive 的，无法阻止默认滚动行为
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+    
+    const handleWheel = (e: WheelEvent) => {
+      onWheel(e);
+    };
+    
+    // 关键：{ passive: false } 允许调用 preventDefault()
+    scrollEl.addEventListener('wheel', handleWheel, { passive: false });
+    return () => scrollEl.removeEventListener('wheel', handleWheel);
+  }, [onWheel, scrollRef]);
 
   // Click handler - identify cell from coordinates
   const handleClick = useCallback(
@@ -263,19 +330,19 @@ export function BeadGrid({
         onCellClick(row, col);
       }
     },
-    [cellSize, pattern, onCellClick]
+    [cellSize, pattern, onCellClick, scrollRef]
   );
 
   return (
     <div
       ref={scrollRef}
       className="w-full h-full overflow-auto relative"
-      onWheel={onWheel}
+      // 不使用 React onWheel，因为它是 passive 的，无法 preventDefault
+      // wheel 事件在 useEffect 中通过原生 addEventListener 添加
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
       onMouseLeave={onMouseUp}
-      onScroll={handleScroll}
     >
       {/* Spacer div to create scrollable area */}
       <div style={{ width: contentW, height: contentH, pointerEvents: 'none' }} />

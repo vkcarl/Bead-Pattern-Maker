@@ -13,8 +13,6 @@ const initialState: PatternState = {
   boardWidth: 29,
   boardHeight: 29,
   zoom: 1,
-  panX: 0,
-  panY: 0,
   selectedTool: 'select',
   selectedColorIndex: null,
   showGridLines: true,
@@ -33,7 +31,7 @@ function patternReducer(state: PatternState, action: PatternAction): PatternStat
     case 'GENERATE_PATTERN': {
       const newHistory = [action.payload];
       // 生成新图案时，设置 shouldCenter 为 true，触发居中显示
-      return { ...state, pattern: action.payload, history: newHistory, historyIndex: 0, isProcessing: false, zoom: 1, panX: 0, panY: 0, shouldCenter: true };
+      return { ...state, pattern: action.payload, history: newHistory, historyIndex: 0, isProcessing: false, zoom: 1, shouldCenter: true };
     }
     case 'SET_CELL': {
       if (!state.pattern) return state;
@@ -59,8 +57,8 @@ function patternReducer(state: PatternState, action: PatternAction): PatternStat
     }
     case 'SET_ZOOM':
       return { ...state, zoom: Math.max(0.1, Math.min(15, action.payload)) };
-    case 'SET_PAN':
-      return { ...state, panX: action.payload.x, panY: action.payload.y, shouldCenter: false };
+    case 'CLEAR_SHOULD_CENTER':
+      return { ...state, shouldCenter: false };
     case 'SET_BOARD_SIZE':
       return { ...state, boardWidth: action.payload.width, boardHeight: action.payload.height };
     case 'SET_TOOL':

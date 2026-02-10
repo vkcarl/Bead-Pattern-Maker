@@ -76,8 +76,6 @@ export interface PatternState {
   boardWidth: number;
   boardHeight: number;
   zoom: number;
-  panX: number;
-  panY: number;
   selectedTool: 'select' | 'paint';
   selectedColorIndex: number | null;
   showGridLines: boolean;
@@ -95,7 +93,7 @@ export type PatternAction =
   | { type: 'UNDO' }
   | { type: 'REDO' }
   | { type: 'SET_ZOOM'; payload: number }
-  | { type: 'SET_PAN'; payload: { x: number; y: number } }
+  | { type: 'CLEAR_SHOULD_CENTER' }
   | { type: 'SET_BOARD_SIZE'; payload: { width: number; height: number } }
   | { type: 'SET_TOOL'; payload: 'select' | 'paint' }
   | { type: 'SET_SELECTED_COLOR'; payload: number }
