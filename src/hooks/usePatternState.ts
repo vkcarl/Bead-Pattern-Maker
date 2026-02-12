@@ -2,6 +2,7 @@
 import { useReducer, useCallback } from 'react';
 import type { PatternState, PatternAction, Pattern } from '@/types';
 import { DEFAULT_PALETTE_ID } from '@/data/palettes';
+import { removeBackground } from '@/lib/flood-fill';
 
 const MAX_HISTORY = 50;
 
@@ -20,6 +21,7 @@ const initialState: PatternState = {
   isProcessing: false,
   shouldCenter: false, // 是否需要居中显示图案
   currentPaletteId: DEFAULT_PALETTE_ID, // 当前选中的色板 ID
+  autoRemoveBackground: true, // 默认开启自动去除背景
 };
 
 function patternReducer(state: PatternState, action: PatternAction): PatternState {
@@ -73,14 +75,33 @@ function patternReducer(state: PatternState, action: PatternAction): PatternStat
       return { ...state, isProcessing: action.payload };
     case 'SET_PALETTE':
       // 切换色板时，清除当前图案和历史记录，因为颜色索引会失效
-      return { 
-        ...state, 
+      return {
+        ...state,
         currentPaletteId: action.payload,
         pattern: null,
         history: [],
         historyIndex: -1,
         selectedColorIndex: null,
       };
+    case 'REMOVE_BACKGROUND': {
+      if (!state.pattern) return state;
+      const newGrid = removeBackground(state.pattern.grid, state.pattern.width, state.pattern.height);
+      const newPattern: Pattern = { ...state.pattern, grid: newGrid };
+      const truncatedHistory = state.history.slice(0, state.historyIndex + 1);
+      truncatedHistory.push(newPattern);
+      if (truncatedHistory.length > MAX_HISTORY) truncatedHistory.shift();
+      return { ...state, pattern: newPattern, history: truncatedHistory, historyIndex: truncatedHistory.length - 1 };
+    }
+    case 'RESTORE_BACKGROUND': {
+      if (!state.pattern) return state;
+      const restoredPattern: Pattern = { ...state.pattern, grid: action.payload };
+      const truncatedHistory = state.history.slice(0, state.historyIndex + 1);
+      truncatedHistory.push(restoredPattern);
+      if (truncatedHistory.length > MAX_HISTORY) truncatedHistory.shift();
+      return { ...state, pattern: restoredPattern, history: truncatedHistory, historyIndex: truncatedHistory.length - 1 };
+    }
+    case 'TOGGLE_AUTO_REMOVE_BG':
+      return { ...state, autoRemoveBackground: !state.autoRemoveBackground };
     default:
       return state;
   }

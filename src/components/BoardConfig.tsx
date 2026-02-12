@@ -6,6 +6,8 @@ interface BoardConfigProps {
   height: number;
   hasImage: boolean;
   isProcessing: boolean;
+  autoRemoveBackground: boolean;
+  onToggleAutoRemoveBg: () => void;
   onSizeChange: (width: number, height: number) => void;
   onConvert: () => void;
 }
@@ -21,7 +23,7 @@ function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
 }
 
-export function BoardConfig({ width, height, hasImage, isProcessing, onSizeChange, onConvert }: BoardConfigProps) {
+export function BoardConfig({ width, height, hasImage, isProcessing, autoRemoveBackground, onToggleAutoRemoveBg, onSizeChange, onConvert }: BoardConfigProps) {
   const [isCustom, setIsCustom] = useState(false);
   // Local string state so users can freely type/clear the input
   const [localW, setLocalW] = useState(String(width));
@@ -109,6 +111,15 @@ export function BoardConfig({ width, height, hasImage, isProcessing, onSizeChang
           />
         </div>
       )}
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={autoRemoveBackground}
+          onChange={onToggleAutoRemoveBg}
+          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+        <span className="text-xs text-gray-600">自动去除背景</span>
+      </label>
       <button
         onClick={onConvert}
         disabled={!hasImage || isProcessing}

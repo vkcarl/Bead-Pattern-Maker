@@ -15,6 +15,8 @@ interface ToolbarProps {
   onToggleGridLines: () => void;
   onToggleBeadCodes: () => void;
   onSelectTool: (tool: 'select' | 'paint') => void;
+  backgroundRemoved: boolean;
+  onToggleBackground: () => void;
 }
 
 function ToolButton({ active, disabled, onClick, title, children }: {
@@ -61,6 +63,13 @@ export function Toolbar(props: ToolbarProps) {
       </ToolButton>
       <ToolButton disabled={!props.canRedo} onClick={props.onRedo} title="重做 (Ctrl+Y)">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 15l6-6m0 0l-6-6m6 6H9a6 6 0 000 12h3" /></svg>
+      </ToolButton>
+
+      <div className="w-px h-4 bg-gray-200 mx-1" />
+
+      {/* Remove background toggle */}
+      <ToolButton active={props.backgroundRemoved} onClick={props.onToggleBackground} title={props.backgroundRemoved ? '恢复背景' : '去除背景'}>
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
       </ToolButton>
 
       <div className="w-px h-4 bg-gray-200 mx-1" />

@@ -2,19 +2,20 @@ import type { Pattern, RGB } from '@/types';
 import { findNearestColor } from './color-match';
 
 // Area-average downsampling: averages all source pixels that map to each target pixel
+// Returns null for fully transparent blocks
 function downsample(
   sourceData: Uint8ClampedArray,
   sourceWidth: number,
   sourceHeight: number,
   targetWidth: number,
   targetHeight: number
-): RGB[][] {
-  const grid: RGB[][] = [];
+): (RGB | null)[][] {
+  const grid: (RGB | null)[][] = [];
   const blockW = sourceWidth / targetWidth;
   const blockH = sourceHeight / targetHeight;
 
   for (let ty = 0; ty < targetHeight; ty++) {
-    const row: RGB[] = [];
+    const row: (RGB | null)[] = [];
     for (let tx = 0; tx < targetWidth; tx++) {
       const sx0 = Math.floor(tx * blockW);
       const sy0 = Math.floor(ty * blockH);
@@ -34,15 +35,17 @@ function downsample(
         }
       }
 
-      if (aSum > 0) {
+      // Average alpha of the block: if mostly transparent, treat as empty
+      const avgAlpha = count > 0 ? aSum / count : 0;
+      if (avgAlpha >= 0.5) {
         row.push({
           r: Math.round(rSum / aSum),
           g: Math.round(gSum / aSum),
           b: Math.round(bSum / aSum),
         });
       } else {
-        // Fully transparent pixel - use white
-        row.push({ r: 255, g: 255, b: 255 });
+        // Mostly transparent block - no bead
+        row.push(null);
       }
     }
     grid.push(row);
@@ -81,8 +84,9 @@ export function processImage(
       );
 
       // Map each pixel to nearest color in current palette
+      // null (transparent) → -1 (empty cell)
       const grid: number[][] = rgbGrid.map((row) =>
-        row.map((pixel) => findNearestColor(pixel.r, pixel.g, pixel.b))
+        row.map((pixel) => pixel === null ? -1 : findNearestColor(pixel.r, pixel.g, pixel.b))
       );
 
       resolve({ width: targetWidth, height: targetHeight, grid });

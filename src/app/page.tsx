@@ -5,6 +5,7 @@ import { usePatternState } from '@/hooks/usePatternState';
 import { useZoomPan } from '@/hooks/useZoomPan';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { processImage } from '@/lib/image-processor';
+import { removeBackground } from '@/lib/flood-fill';
 import { exportPatternAsPDF } from '@/lib/export-pdf';
 import { exportPatternAsPNG, exportPatternWithCodesPNG } from '@/lib/export-image';
 import { PaletteManager, setActivePaletteById } from '@/lib/palette';
@@ -34,6 +35,9 @@ export default function Home() {
   const [showImporter, setShowImporter] = useState(false);
   // 用于触发色板列表刷新的 key
   const [paletteRefreshKey, setPaletteRefreshKey] = useState(0);
+  // 背景去除 toggle 状态
+  const [backgroundRemoved, setBackgroundRemoved] = useState(false);
+  const preRemovalGridRef = useRef<number[][] | null>(null);
 
   // 获取当前色板的颜色数组
   const currentPalette = useMemo(() => {
@@ -61,11 +65,38 @@ export default function Home() {
     dispatch({ type: 'SET_PROCESSING', payload: true });
     try {
       const pattern = await processImage(state.originalImage, state.boardWidth, state.boardHeight);
+      if (state.autoRemoveBackground) {
+        // 保存去背景前的 grid，以便 toggle 恢复
+        preRemovalGridRef.current = pattern.grid.map(r => [...r]);
+        pattern.grid = removeBackground(pattern.grid, pattern.width, pattern.height);
+        setBackgroundRemoved(true);
+      } else {
+        preRemovalGridRef.current = null;
+        setBackgroundRemoved(false);
+      }
       dispatch({ type: 'GENERATE_PATTERN', payload: pattern });
     } catch {
       dispatch({ type: 'SET_PROCESSING', payload: false });
     }
-  }, [state.originalImage, state.boardWidth, state.boardHeight, dispatch]);
+  }, [state.originalImage, state.boardWidth, state.boardHeight, state.autoRemoveBackground, dispatch]);
+
+  // 切换背景去除状态
+  const handleToggleBackground = useCallback(() => {
+    if (!state.pattern) return;
+    if (!backgroundRemoved) {
+      // 保存当前 grid，执行去背景
+      preRemovalGridRef.current = state.pattern.grid.map(r => [...r]);
+      dispatch({ type: 'REMOVE_BACKGROUND' });
+      setBackgroundRemoved(true);
+    } else {
+      // 恢复去背景前的 grid
+      if (preRemovalGridRef.current) {
+        dispatch({ type: 'RESTORE_BACKGROUND', payload: preRemovalGridRef.current });
+        preRemovalGridRef.current = null;
+      }
+      setBackgroundRemoved(false);
+    }
+  }, [state.pattern, backgroundRemoved, dispatch]);
 
   // Cell click handler (paint mode)
   const handleCellClick = useCallback(
@@ -172,6 +203,8 @@ export default function Home() {
             height={state.boardHeight}
             hasImage={!!state.originalImage}
             isProcessing={state.isProcessing}
+            autoRemoveBackground={state.autoRemoveBackground}
+            onToggleAutoRemoveBg={() => dispatch({ type: 'TOGGLE_AUTO_REMOVE_BG' })}
             onSizeChange={(w, h) => dispatch({ type: 'SET_BOARD_SIZE', payload: { width: w, height: h } })}
             onConvert={handleConvert}
           />
@@ -230,6 +263,8 @@ export default function Home() {
                 onToggleGridLines={() => dispatch({ type: 'TOGGLE_GRID_LINES' })}
                 onToggleBeadCodes={() => dispatch({ type: 'TOGGLE_BEAD_CODES' })}
                 onSelectTool={(tool) => dispatch({ type: 'SET_TOOL', payload: tool })}
+                backgroundRemoved={backgroundRemoved}
+                onToggleBackground={handleToggleBackground}
               />
               <div className="flex-1 overflow-hidden">
                 <BeadGrid

@@ -36,6 +36,21 @@ export function ColorPicker({ pattern, colors, selectedColorIndex, onSelectColor
   return (
     <div className="space-y-2">
       <h3 className="text-sm font-medium text-gray-700">调色板</h3>
+      {/* Eraser - special "color" to remove beads */}
+      <button
+        onClick={() => onSelectColor(-1)}
+        title="擦除豆子"
+        className={`flex items-center gap-1.5 w-full px-2 py-1 rounded-md text-xs transition-colors ${
+          selectedColorIndex === -1
+            ? 'bg-blue-50 border border-blue-500 text-blue-700'
+            : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+        }`}
+      >
+        <span className="w-5 h-5 rounded-sm border border-gray-300 flex items-center justify-center bg-white relative overflow-hidden">
+          <span className="absolute w-[141%] h-px bg-red-400 rotate-45" />
+        </span>
+        <span>擦除豆子</span>
+      </button>
       <input
         type="text"
         placeholder="搜索颜色名称或编号..."

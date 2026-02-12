@@ -1,13 +1,13 @@
 #!/bin/bash
 
-echo "正在打包像素珠转换器..."
+echo "正在打包拼豆图案转换器..."
 
 # 获取脚本所在目录
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
 # 创建临时目录
-TEMP_DIR="像素珠转换器"
+TEMP_DIR="拼豆图案转换器"
 rm -rf "$TEMP_DIR" 2>/dev/null
 mkdir -p "$TEMP_DIR"
 

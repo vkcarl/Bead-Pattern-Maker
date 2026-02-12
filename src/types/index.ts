@@ -83,6 +83,7 @@ export interface PatternState {
   isProcessing: boolean;
   shouldCenter: boolean; // 是否需要居中显示图案
   currentPaletteId: string; // 当前选中的色板 ID
+  autoRemoveBackground: boolean; // 生成图案时是否自动去除背景
 }
 
 export type PatternAction =
@@ -100,4 +101,7 @@ export type PatternAction =
   | { type: 'TOGGLE_GRID_LINES' }
   | { type: 'TOGGLE_BEAD_CODES' }
   | { type: 'SET_PROCESSING'; payload: boolean }
-  | { type: 'SET_PALETTE'; payload: string };
+  | { type: 'SET_PALETTE'; payload: string }
+  | { type: 'REMOVE_BACKGROUND' }
+  | { type: 'RESTORE_BACKGROUND'; payload: number[][] }
+  | { type: 'TOGGLE_AUTO_REMOVE_BG' };
