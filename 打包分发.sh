@@ -18,7 +18,7 @@ cp 启动应用.command "$TEMP_DIR/"
 cp 小白使用说明.md "$TEMP_DIR/"
 
 # 创建ZIP文件
-ZIP_NAME="像素珠转换器.zip"
+ZIP_NAME="拼豆图案转换器.zip"
 rm -f "$ZIP_NAME" 2>/dev/null
 zip -r "$ZIP_NAME" "$TEMP_DIR"
 
