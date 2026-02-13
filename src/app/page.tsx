@@ -38,6 +38,8 @@ export default function Home() {
   // 背景去除 toggle 状态
   const [backgroundRemoved, setBackgroundRemoved] = useState(false);
   const preRemovalGridRef = useRef<number[][] | null>(null);
+  // 手机端侧边栏折叠状态
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // 获取当前色板的颜色数组
   const currentPalette = useMemo(() => {
@@ -163,9 +165,21 @@ export default function Home() {
         <span className="text-xs text-gray-400">{currentPalette.name}</span>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
         {/* Sidebar */}
-        <aside className="w-72 bg-white border-r overflow-y-auto flex-shrink-0 p-4 space-y-5">
+        <aside className="bg-white border-b md:border-b-0 md:border-r flex-shrink-0 md:w-72">
+          {/* 手机端折叠按钮 */}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 md:hidden"
+          >
+            <span>{sidebarCollapsed ? '展开面板' : '收起面板'}</span>
+            <svg className={`w-4 h-4 transition-transform ${sidebarCollapsed ? '' : 'rotate-180'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          {/* 侧边栏内容 */}
+          <div className={`${sidebarCollapsed ? 'hidden' : 'max-h-[50vh] overflow-y-auto'} md:block md:max-h-none md:overflow-y-auto p-4 space-y-5`}>
           {/* Palette selector */}
           <PaletteSelector
             currentPaletteId={state.currentPaletteId}
@@ -228,6 +242,7 @@ export default function Home() {
             onExportPDF={handleExportPDF}
             onExportPNG={handleExportPNG}
           />
+          </div>
         </aside>
 
         {/* Main area */}
@@ -293,7 +308,7 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
                 </svg>
                 <p className="text-sm">上传图片并点击「生成拼豆图案」开始</p>
-                <p className="text-xs text-gray-300">支持滚轮缩放 / Alt+拖拽平移 / 快捷键 V B Ctrl+Z/Y</p>
+                <p className="text-xs text-gray-300">支持Ctrl(Win)/Cmd(Mac) + 滚轮缩放 / Shift + 滚轮水平平移 </p>
               </div>
             </div>
           )}
