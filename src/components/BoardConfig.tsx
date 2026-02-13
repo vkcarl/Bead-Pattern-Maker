@@ -111,15 +111,18 @@ export function BoardConfig({ width, height, hasImage, isProcessing, autoRemoveB
           />
         </div>
       )}
-      <label className="flex items-center gap-2 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={autoRemoveBackground}
-          onChange={onToggleAutoRemoveBg}
-          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-        />
-        <span className="text-xs text-gray-600">自动去除背景</span>
-      </label>
+      <div className="space-y-1">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={autoRemoveBackground}
+            onChange={onToggleAutoRemoveBg}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <span className="text-xs text-gray-600">自动去除背景</span>
+        </label>
+        <p className="text-[11px] text-gray-400 leading-tight pl-6">去除背景效果不佳时建议使用常用的修图软件将原图转为透明背景的png图片后再进行拼豆图案生成</p>
+      </div>
       <button
         onClick={onConvert}
         disabled={!hasImage || isProcessing}
