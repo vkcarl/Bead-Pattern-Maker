@@ -76,28 +76,29 @@ function computeStats(pattern: Pattern, colors: BeadColor[]): BeadCount[] {
     .sort((a, b) => b.count - a.count);
 }
 
-export async function exportPatternAsPDF(pattern: Pattern, colors?: BeadColor[]): Promise<void> {
+export async function exportPatternAsPDF(pattern: Pattern, colors?: BeadColor[], beadSizeMm: number = 2.6): Promise<void> {
   // 使用传入的颜色数组或获取当前色板
   const paletteColors = colors || getCurrentPaletteColors();
-  
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
+
+  // 图案页：每格固定物理尺寸，页面大小自适应
+  const cellSize = beadSizeMm;
   const margin = 10;
+  const gridW = pattern.width * cellSize;
+  const gridH = pattern.height * cellSize;
+  const pageW = gridW + 2 * margin;
+  const pageH = gridH + 2 * margin + 15; // 额外 15mm 给标题
+
+  const doc = new jsPDF({
+    orientation: pageW >= pageH ? 'landscape' : 'portrait',
+    unit: 'mm',
+    format: [pageW, pageH],
+  });
 
   // Title - 使用 Canvas 渲染中文
   addChineseText(doc, `拼豆图案 (${pattern.width} x ${pattern.height})`, margin, margin + 5, 14);
-  addChineseText(doc, `${paletteColors.length} 色色板`, margin, margin + 10, 8);
+  addChineseText(doc, `${paletteColors.length} 色色板 · 豆子 ${beadSizeMm}mm`, margin, margin + 10, 8);
 
-  // Calculate cell size to fit page
-  const availW = pageW - 2 * margin;
-  const availH = pageH - 2 * margin - 15;
-  const cellSize = Math.min(availW / pattern.width, availH / pattern.height, 4);
-
-  const gridW = pattern.width * cellSize;
-  const gridH = pattern.height * cellSize;
-  const offsetX = margin + (availW - gridW) / 2;
+  const offsetX = margin;
   const offsetY = margin + 15;
 
   // Draw beads
@@ -165,8 +166,11 @@ export async function exportPatternAsPDF(pattern: Pattern, colors?: BeadColor[])
   doc.setLineWidth(0.2);
   doc.rect(offsetX, offsetY, gridW, gridH, 'S');
 
-  // Color legend on page 2
-  doc.addPage('portrait');
+  // Color legend on page 2 (A4 portrait)
+  doc.addPage([210, 297], 'portrait');
+
+  const legendPageW = 210;
+  const legendPageH = 297;
   
   // 标题
   addChineseText(doc, '颜色图例', margin, margin + 5, 12);
@@ -188,8 +192,8 @@ export async function exportPatternAsPDF(pattern: Pattern, colors?: BeadColor[])
   let cy = startY + rowH;
 
   for (const stat of stats) {
-    if (cy > pageH - margin) {
-      doc.addPage('portrait');
+    if (cy > legendPageH - margin) {
+      doc.addPage([210, 297], 'portrait');
       cy = margin + 5;
     }
 

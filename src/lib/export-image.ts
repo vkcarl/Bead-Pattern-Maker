@@ -2,11 +2,16 @@ import type { Pattern, BeadColor } from '@/types';
 import { relativeLuminance } from '@/lib/color-convert';
 import { getCurrentPaletteColors } from '@/lib/palette';
 
-export function exportPatternAsPNG(pattern: Pattern, colors?: BeadColor[]): void {
+// Convert mm to pixels at 300 DPI
+function mmToPx(mm: number): number {
+  return Math.round(mm / 25.4 * 300);
+}
+
+export function exportPatternAsPNG(pattern: Pattern, colors?: BeadColor[], beadSizeMm: number = 2.6): void {
   // 使用传入的颜色数组或获取当前色板
   const paletteColors = colors || getCurrentPaletteColors();
-  
-  const cellSize = 20;
+
+  const cellSize = mmToPx(beadSizeMm);
   const canvas = document.createElement('canvas');
   canvas.width = pattern.width * cellSize;
   canvas.height = pattern.height * cellSize;
@@ -74,11 +79,11 @@ export function exportPatternAsPNG(pattern: Pattern, colors?: BeadColor[]): void
   }, 'image/png');
 }
 
-export function exportPatternWithCodesPNG(pattern: Pattern, colors?: BeadColor[]): void {
+export function exportPatternWithCodesPNG(pattern: Pattern, colors?: BeadColor[], beadSizeMm: number = 2.6): void {
   // 使用传入的颜色数组或获取当前色板
   const paletteColors = colors || getCurrentPaletteColors();
-  
-  const cellSize = 30;
+
+  const cellSize = mmToPx(beadSizeMm);
   const canvas = document.createElement('canvas');
   canvas.width = pattern.width * cellSize;
   canvas.height = pattern.height * cellSize;
@@ -107,7 +112,7 @@ export function exportPatternWithCodesPNG(pattern: Pattern, colors?: BeadColor[]
       // Code label
       const lum = relativeLuminance(color.r, color.g, color.b);
       ctx.fillStyle = lum > 0.18 ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.9)';
-      ctx.font = `bold 8px monospace`;
+      ctx.font = `bold ${Math.round(cellSize * 0.27)}px monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(color.id, cx, cy);

@@ -114,12 +114,12 @@ export default function Home() {
   );
 
   // Export handlers
-  const handleExportPDF = useCallback(async () => {
-    if (state.pattern) await exportPatternAsPDF(state.pattern, currentColors);
+  const handleExportPDF = useCallback(async (beadSize: number) => {
+    if (state.pattern) await exportPatternAsPDF(state.pattern, currentColors, beadSize);
   }, [state.pattern, currentColors]);
 
-  const handleExportPNG = useCallback(() => {
-    if (state.pattern) exportPatternWithCodesPNG(state.pattern, currentColors);
+  const handleExportPNG = useCallback((beadSize: number) => {
+    if (state.pattern) exportPatternWithCodesPNG(state.pattern, currentColors, beadSize);
   }, [state.pattern, currentColors]);
 
   // 色板选择处理
