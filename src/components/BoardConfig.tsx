@@ -13,10 +13,10 @@ interface BoardConfigProps {
 }
 
 const PRESETS = [
-  { label: '29×29', w: 29, h: 29 },
-  { label: '58×29', w: 58, h: 29 },
-  { label: '29×58', w: 29, h: 58 },
-  { label: '58×58', w: 58, h: 58 },
+  { label: '32×32', w: 32, h: 32 },
+  { label: '40×40', w: 40, h: 40 },
+  { label: '52×52', w: 52, h: 52 },
+  { label: '104×104', w: 104, h: 104 },
 ];
 
 function clamp(v: number, min: number, max: number) {

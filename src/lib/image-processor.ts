@@ -74,19 +74,34 @@ export function processImage(
       ctx.drawImage(img, 0, 0);
       const imageData = ctx.getImageData(0, 0, img.width, img.height);
 
-      // Downsample to target grid size
+      // Fit mode: preserve aspect ratio, fit within target bounds
+      const scale = Math.min(targetWidth / img.width, targetHeight / img.height);
+      const fitW = Math.max(1, Math.round(img.width * scale));
+      const fitH = Math.max(1, Math.round(img.height * scale));
+
+      // Downsample to fitted size
       const rgbGrid = downsample(
         imageData.data,
         img.width,
         img.height,
-        targetWidth,
-        targetHeight
+        fitW,
+        fitH
       );
 
-      // Map each pixel to nearest color in current palette
-      // null (transparent) → -1 (empty cell)
-      const grid: number[][] = rgbGrid.map((row) =>
+      // Map to palette colors
+      const fitGrid: number[][] = rgbGrid.map((row) =>
         row.map((pixel) => pixel === null ? -1 : findNearestColor(pixel.r, pixel.g, pixel.b))
+      );
+
+      // Place centered in full target grid, padding with -1 (empty)
+      const offsetX = Math.floor((targetWidth - fitW) / 2);
+      const offsetY = Math.floor((targetHeight - fitH) / 2);
+      const grid: number[][] = Array.from({ length: targetHeight }, (_, r) =>
+        Array.from({ length: targetWidth }, (_, c) => {
+          const fr = r - offsetY;
+          const fc = c - offsetX;
+          return (fr >= 0 && fr < fitH && fc >= 0 && fc < fitW) ? fitGrid[fr][fc] : -1;
+        })
       );
 
       resolve({ width: targetWidth, height: targetHeight, grid });
