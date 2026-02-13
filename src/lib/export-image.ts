@@ -50,13 +50,13 @@ export function exportPatternAsPNG(pattern: Pattern, colors?: BeadColor[]): void
   // Board dividers
   ctx.strokeStyle = 'rgba(0,0,0,0.3)';
   ctx.lineWidth = 1.5;
-  for (let i = 29; i < pattern.width; i += 29) {
+  for (let i = 10; i < pattern.width; i += 10) {
     ctx.beginPath();
     ctx.moveTo(i * cellSize, 0);
     ctx.lineTo(i * cellSize, pattern.height * cellSize);
     ctx.stroke();
   }
-  for (let i = 29; i < pattern.height; i += 29) {
+  for (let i = 10; i < pattern.height; i += 10) {
     ctx.beginPath();
     ctx.moveTo(0, i * cellSize);
     ctx.lineTo(pattern.width * cellSize, i * cellSize);

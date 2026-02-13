@@ -151,11 +151,11 @@ export async function exportPatternAsPDF(pattern: Pattern, colors?: BeadColor[])
   // Board divider lines
   doc.setDrawColor(80, 80, 80);
   doc.setLineWidth(0.3);
-  for (let i = 29; i < pattern.width; i += 29) {
+  for (let i = 10; i < pattern.width; i += 10) {
     const x = offsetX + i * cellSize;
     doc.line(x, offsetY, x, offsetY + gridH);
   }
-  for (let i = 29; i < pattern.height; i += 29) {
+  for (let i = 10; i < pattern.height; i += 10) {
     const y = offsetY + i * cellSize;
     doc.line(offsetX, y, offsetX + gridW, y);
   }
