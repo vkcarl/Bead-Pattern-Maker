@@ -171,15 +171,15 @@ export default function Home() {
           {/* 手机端折叠按钮 */}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 md:hidden"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium bg-blue-50 text-blue-700 active:bg-blue-100 border-b border-blue-100 md:hidden"
           >
-            <span>{sidebarCollapsed ? '展开面板' : '收起面板'}</span>
-            <svg className={`w-4 h-4 transition-transform ${sidebarCollapsed ? '' : 'rotate-180'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <span>{sidebarCollapsed ? '展开设置面板' : '收起设置面板'}</span>
+            <svg className={`w-4 h-4 transition-transform ${sidebarCollapsed ? '' : 'rotate-180'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
           {/* 侧边栏内容 */}
-          <div className={`${sidebarCollapsed ? 'hidden' : 'max-h-[50vh] overflow-y-auto'} md:block md:max-h-none md:overflow-y-auto p-4 space-y-5`}>
+          <div className={`${sidebarCollapsed ? 'hidden' : 'max-h-[35vh] overflow-y-auto'} md:block md:max-h-none md:overflow-y-auto p-4 space-y-5`}>
           {/* Palette selector */}
           <PaletteSelector
             currentPaletteId={state.currentPaletteId}
