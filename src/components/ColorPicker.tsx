@@ -58,6 +58,19 @@ export function ColorPicker({ pattern, colors, selectedColorIndex, onSelectColor
         onChange={e => setSearch(e.target.value)}
         className="w-full px-2 py-1 text-xs border rounded-md"
       />
+      {/* 已选中颜色提示 */}
+      {selectedColorIndex !== null && selectedColorIndex >= 0 && selectedColorIndex < colors.length && (
+        <div className="flex items-center gap-2 py-1.5 px-2 bg-blue-50 rounded-md border border-blue-200">
+          <span
+            className="w-5 h-5 rounded-sm border-2 border-blue-500 ring-1 ring-blue-300 flex-shrink-0"
+            style={{ backgroundColor: colors[selectedColorIndex].hex }}
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-blue-700 font-medium truncate">已选中颜色</p>
+            <p className="text-xs text-blue-600 truncate">{colors[selectedColorIndex].id} {colors[selectedColorIndex].name}</p>
+          </div>
+        </div>
+      )}
       {!search && usedColors.length > 0 && (
         <div>
           <p className="text-xs text-gray-400 mb-1">已使用</p>

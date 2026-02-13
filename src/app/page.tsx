@@ -113,6 +113,15 @@ export default function Home() {
     [state.selectedTool, state.selectedColorIndex, dispatch]
   );
 
+  // 取色笔取色处理
+  const handleEyedropperPick = useCallback(
+    (colorIndex: number) => {
+      // 取色后更新选中的颜色
+      dispatch({ type: 'SET_EYEDROPPER_COLOR', payload: colorIndex });
+    },
+    [dispatch]
+  );
+
   // Export handlers
   const handleExportPDF = useCallback(async (beadSize: number) => {
     if (state.pattern) await exportPatternAsPDF(state.pattern, currentColors, beadSize);
@@ -169,6 +178,9 @@ export default function Home() {
       }
       if (e.key === 'b' && !e.metaKey && !e.ctrlKey) {
         dispatch({ type: 'SET_TOOL', payload: 'paint' });
+      }
+      if (e.key === 'i' && !e.metaKey && !e.ctrlKey) {
+        dispatch({ type: 'SET_TOOL', payload: 'eyedropper' });
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -322,6 +334,7 @@ export default function Home() {
                   selectedTool={state.selectedTool}
                   selectedColorIndex={state.selectedColorIndex}
                   onCellClick={handleCellClick}
+                  onEyedropperPick={handleEyedropperPick}
                   onWheel={onWheel}
                   onMouseDown={onMouseDown}
                   onMouseMove={onMouseMove}

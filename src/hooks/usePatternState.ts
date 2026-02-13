@@ -65,6 +65,9 @@ function patternReducer(state: PatternState, action: PatternAction): PatternStat
       return { ...state, boardWidth: action.payload.width, boardHeight: action.payload.height };
     case 'SET_TOOL':
       return { ...state, selectedTool: action.payload };
+    case 'SET_EYEDROPPER_COLOR':
+      // 取色笔选中颜色后，更新selectedColorIndex但不切换工具
+      return { ...state, selectedColorIndex: action.payload };
     case 'SET_SELECTED_COLOR':
       return { ...state, selectedColorIndex: action.payload, selectedTool: 'paint' };
     case 'TOGGLE_GRID_LINES':

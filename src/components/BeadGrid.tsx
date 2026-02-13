@@ -11,9 +11,10 @@ interface BeadGridProps {
   zoom: number;
   showGridLines: boolean;
   showBeadCodes: boolean;
-  selectedTool: 'select' | 'paint';
+  selectedTool: 'select' | 'paint' | 'eyedropper';
   selectedColorIndex: number | null;
   onCellClick: (row: number, col: number) => void;
+  onEyedropperPick?: (colorIndex: number) => void; // 取色笔取色回调
   onWheel: (e: WheelEvent) => void; // 改为原生 WheelEvent
   onMouseDown: (e: React.MouseEvent) => void;
   onMouseMove: (e: React.MouseEvent) => void;
@@ -39,6 +40,7 @@ export function BeadGrid({
   selectedTool,
   selectedColorIndex,
   onCellClick,
+  onEyedropperPick,
   onWheel,
   onMouseDown,
   onMouseMove,
@@ -327,10 +329,18 @@ export function BeadGrid({
       const row = Math.floor((mouseY - offsetY) / cellSize);
 
       if (row >= 0 && row < pattern.height && col >= 0 && col < pattern.width) {
-        onCellClick(row, col);
+        // 取色笔工具：点击时获取该位置的颜色
+        if (selectedTool === 'eyedropper') {
+          const colorIndex = pattern.grid[row][col];
+          if (colorIndex >= 0 && colorIndex < colors.length && onEyedropperPick) {
+            onEyedropperPick(colorIndex);
+          }
+        } else {
+          onCellClick(row, col);
+        }
       }
     },
-    [cellSize, pattern, onCellClick, scrollRef]
+    [cellSize, pattern, colors, selectedTool, onCellClick, onEyedropperPick, scrollRef]
   );
 
   return (
@@ -350,7 +360,10 @@ export function BeadGrid({
       <canvas
         ref={canvasRef}
         onClick={handleClick}
-        className={`sticky top-0 left-0 ${selectedTool === 'paint' ? 'cursor-crosshair' : 'cursor-default'}`}
+        className={`sticky top-0 left-0 ${
+          selectedTool === 'paint' ? 'cursor-crosshair' : 
+          selectedTool === 'eyedropper' ? 'cursor-cell' : 'cursor-default'
+        }`}
         style={{ marginTop: -contentH }}
       />
     </div>
