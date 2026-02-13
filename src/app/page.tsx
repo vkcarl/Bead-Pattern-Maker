@@ -167,7 +167,7 @@ export default function Home() {
 
       <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
         {/* Sidebar */}
-        <aside className="bg-white border-b md:border-b-0 md:border-r flex-shrink-0 md:w-72">
+        <aside className="bg-white border-b md:border-b-0 md:border-r flex-shrink-0 md:w-72 md:overflow-y-auto">
           {/* 手机端折叠按钮 */}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
