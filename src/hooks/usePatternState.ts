@@ -11,8 +11,8 @@ const initialState: PatternState = {
   pattern: null,
   history: [],
   historyIndex: -1,
-  boardWidth: 32,
-  boardHeight: 32,
+  boardWidth: 52,
+  boardHeight: 52,
   zoom: 1,
   selectedTool: 'select',
   selectedColorIndex: null,
@@ -21,7 +21,7 @@ const initialState: PatternState = {
   isProcessing: false,
   shouldCenter: false, // 是否需要居中显示图案
   currentPaletteId: DEFAULT_PALETTE_ID, // 当前选中的色板 ID
-  autoRemoveBackground: true, // 默认开启自动去除背景
+  autoRemoveBackground: false, // 默认关闭自动去除背景
 };
 
 function patternReducer(state: PatternState, action: PatternAction): PatternState {

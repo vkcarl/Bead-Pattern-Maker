@@ -133,6 +133,26 @@ export default function Home() {
     dispatch({ type: 'SET_PALETTE', payload: paletteId });
   }, [dispatch]);
 
+  // 加载示例图片
+  const handleLoadExample = useCallback(async (src: string) => {
+    const res = await fetch(src);
+    const blob = await res.blob();
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        dispatch({ type: 'SET_IMAGE', payload: dataUrl });
+        // 根据示例图设置对应的拼豆板尺寸
+        if (src === '/example1.jpg') {
+          dispatch({ type: 'SET_BOARD_SIZE', payload: { width: 52, height: 52 } });
+        } else if (src === '/example2.png') {
+          dispatch({ type: 'SET_BOARD_SIZE', payload: { width: 60, height: 60 } });
+        }
+      }
+    };
+    reader.readAsDataURL(blob);
+  }, [dispatch]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -191,7 +211,18 @@ export default function Home() {
 
           {/* Upload section */}
           {!state.originalImage ? (
-            <ImageUploader onDrop={onDrop} onDragOver={onDragOver} onFileSelect={onFileSelect} />
+            <div className="space-y-2">
+              <div className="flex gap-2 items-center">
+                <span className="text-xs text-gray-500 shrink-0 leading-tight">快速<br/>尝试</span>
+                <button onClick={() => handleLoadExample('/example1.jpg')} className="w-14 h-14 shrink-0 overflow-hidden rounded-lg border border-gray-200 hover:border-blue-400 transition-colors">
+                  <img src="/example1.jpg" alt="示例1" className="w-full h-full object-cover" />
+                </button>
+                <button onClick={() => handleLoadExample('/example2.png')} className="w-14 h-14 shrink-0 overflow-hidden rounded-lg border border-gray-200 hover:border-blue-400 transition-colors">
+                  <img src="/example2.png" alt="示例2" className="w-full h-full object-cover" />
+                </button>
+              </div>
+              <ImageUploader onDrop={onDrop} onDragOver={onDragOver} onFileSelect={onFileSelect} />
+            </div>
           ) : (
             <div className="space-y-2">
               <div className="relative">

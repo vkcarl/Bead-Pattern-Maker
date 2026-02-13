@@ -33,6 +33,12 @@ export function BoardConfig({ width, height, hasImage, isProcessing, autoRemoveB
   useEffect(() => { setLocalW(String(width)); }, [width]);
   useEffect(() => { setLocalH(String(height)); }, [height]);
 
+  // 监听外部尺寸变化，自动更新isCustom状态
+  useEffect(() => {
+    const isPreset = PRESETS.some(preset => preset.w === width && preset.h === height);
+    setIsCustom(!isPreset);
+  }, [width, height]);
+
   const commitWidth = () => {
     const n = Number(localW);
     if (!localW || isNaN(n)) {
