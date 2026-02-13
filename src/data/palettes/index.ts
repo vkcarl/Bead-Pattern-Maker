@@ -9,14 +9,16 @@
 
 import type { ColorPalette, BeadColor } from '@/types';
 import { artkalCColors } from './artkal-c';
+import { mardColors } from './mard';
 
 // 色板 ID 常量
 export const PALETTE_IDS = {
+  MARD: 'mard',
   ARTKAL_C: 'artkal-c',
 } as const;
 
 // 默认色板 ID
-export const DEFAULT_PALETTE_ID = PALETTE_IDS.ARTKAL_C;
+export const DEFAULT_PALETTE_ID = PALETTE_IDS.MARD;
 
 // Artkal C 系列色板定义
 export const artkalCPalette: ColorPalette = {
@@ -28,8 +30,19 @@ export const artkalCPalette: ColorPalette = {
   isBuiltIn: true,
 };
 
+// Mard 系列色板定义
+export const mardPalette: ColorPalette = {
+  id: PALETTE_IDS.MARD,
+  name: 'Mard 系列',
+  brand: 'Mard',
+  description: 'Mard · 221色',
+  colors: mardColors,
+  isBuiltIn: true,
+};
+
 // 所有内置色板列表
 export const builtInPalettes: ColorPalette[] = [
+  mardPalette,
   artkalCPalette,
 ];
 
