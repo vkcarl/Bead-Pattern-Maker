@@ -9,6 +9,7 @@ import { removeBackground } from '@/lib/flood-fill';
 import { exportPatternAsPDF } from '@/lib/export-pdf';
 import { exportPatternAsPNG, exportPatternWithCodesPNG } from '@/lib/export-image';
 import { PaletteManager, setActivePaletteById } from '@/lib/palette';
+import type { BrushShape } from '@/types';
 
 import { ImageUploader } from '@/components/ImageUploader';
 import { BoardConfig } from '@/components/BoardConfig';
@@ -100,17 +101,63 @@ export default function Home() {
     }
   }, [state.pattern, backgroundRemoved, dispatch]);
 
+  // 根据画笔形状计算受影响的单元格
+  const getBrushCells = useCallback(
+    (row: number, col: number, shape: BrushShape) => {
+      if (!state.pattern) return [];
+      const cells: { row: number; col: number }[] = [];
+      switch (shape) {
+        case 'dot':
+          cells.push({ row, col });
+          break;
+        case 'row':
+          for (let c = 0; c < state.pattern.width; c++) {
+            cells.push({ row, col: c });
+          }
+          break;
+        case 'col':
+          for (let r = 0; r < state.pattern.height; r++) {
+            cells.push({ row: r, col });
+          }
+          break;
+        case 'grid3x3':
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              const nr = row + dr;
+              const nc = col + dc;
+              if (nr >= 0 && nr < state.pattern.height && nc >= 0 && nc < state.pattern.width) {
+                cells.push({ row: nr, col: nc });
+              }
+            }
+          }
+          break;
+      }
+      return cells;
+    },
+    [state.pattern]
+  );
+
   // Cell click handler (paint mode)
   const handleCellClick = useCallback(
     (row: number, col: number) => {
       if (state.selectedTool === 'paint' && state.selectedColorIndex !== null) {
-        dispatch({
-          type: 'SET_CELL',
-          payload: { row, col, colorIndex: state.selectedColorIndex },
-        });
+        if (state.brushShape === 'dot') {
+          // 单点模式保持原来的逻辑
+          dispatch({
+            type: 'SET_CELL',
+            payload: { row, col, colorIndex: state.selectedColorIndex },
+          });
+        } else {
+          // 批量模式
+          const cells = getBrushCells(row, col, state.brushShape);
+          dispatch({
+            type: 'SET_CELLS',
+            payload: { cells, colorIndex: state.selectedColorIndex },
+          });
+        }
       }
     },
-    [state.selectedTool, state.selectedColorIndex, dispatch]
+    [state.selectedTool, state.selectedColorIndex, state.brushShape, getBrushCells, dispatch]
   );
 
   // 取色笔取色处理
@@ -192,6 +239,19 @@ export default function Home() {
       }
       if (e.key === 'e' && !e.metaKey && !e.ctrlKey) {
         dispatch({ type: 'SET_TOOL', payload: 'flood-erase' });
+      }
+      // 画笔形状快捷键
+      if (e.key === '1' && !e.metaKey && !e.ctrlKey) {
+        dispatch({ type: 'SET_BRUSH_SHAPE', payload: 'dot' });
+      }
+      if (e.key === '2' && !e.metaKey && !e.ctrlKey) {
+        dispatch({ type: 'SET_BRUSH_SHAPE', payload: 'row' });
+      }
+      if (e.key === '3' && !e.metaKey && !e.ctrlKey) {
+        dispatch({ type: 'SET_BRUSH_SHAPE', payload: 'col' });
+      }
+      if (e.key === '4' && !e.metaKey && !e.ctrlKey) {
+        dispatch({ type: 'SET_BRUSH_SHAPE', payload: 'grid3x3' });
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -310,6 +370,7 @@ export default function Home() {
                 canUndo={canUndo}
                 canRedo={canRedo}
                 selectedTool={state.selectedTool}
+                brushShape={state.brushShape}
                 onZoomIn={() => dispatch({ type: 'SET_ZOOM', payload: state.zoom * 1.25 })}
                 onZoomOut={() => dispatch({ type: 'SET_ZOOM', payload: state.zoom / 1.25 })}
                 onZoomReset={() => {
@@ -332,6 +393,7 @@ export default function Home() {
                 onToggleGridLines={() => dispatch({ type: 'TOGGLE_GRID_LINES' })}
                 onToggleBeadCodes={() => dispatch({ type: 'TOGGLE_BEAD_CODES' })}
                 onSelectTool={(tool) => dispatch({ type: 'SET_TOOL', payload: tool })}
+                onSelectBrushShape={(shape) => dispatch({ type: 'SET_BRUSH_SHAPE', payload: shape })}
                 backgroundRemoved={backgroundRemoved}
                 onToggleBackground={handleToggleBackground}
               />
@@ -344,6 +406,7 @@ export default function Home() {
                   showBeadCodes={state.showBeadCodes}
                   selectedTool={state.selectedTool}
                   selectedColorIndex={state.selectedColorIndex}
+                  brushShape={state.brushShape}
                   onCellClick={handleCellClick}
                   onEyedropperPick={handleEyedropperPick}
                   onFloodErase={handleFloodErase}

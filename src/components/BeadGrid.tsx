@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, useEffect, useCallback, RefObject } from 'react';
+import { useRef, useEffect, useCallback, useState, RefObject } from 'react';
 import { relativeLuminance } from '@/lib/color-convert';
-import type { Pattern, BeadColor } from '@/types';
+import type { Pattern, BeadColor, BrushShape } from '@/types';
 import { zoomMousePosition } from '@/hooks/useZoomPan';
 
 interface BeadGridProps {
@@ -13,6 +13,7 @@ interface BeadGridProps {
   showBeadCodes: boolean;
   selectedTool: 'select' | 'paint' | 'eyedropper' | 'flood-erase';
   selectedColorIndex: number | null;
+  brushShape: BrushShape;
   onCellClick: (row: number, col: number) => void;
   onEyedropperPick?: (colorIndex: number) => void; // 取色笔取色回调
   onFloodErase?: (row: number, col: number) => void; // 色块消除回调
@@ -40,6 +41,7 @@ export function BeadGrid({
   showBeadCodes,
   selectedTool,
   selectedColorIndex,
+  brushShape,
   onCellClick,
   onEyedropperPick,
   onFloodErase,
@@ -56,6 +58,8 @@ export function BeadGrid({
   const prevZoomRef = useRef(zoom);
   // 标记是否正在进行缩放，用于跳过 scroll 事件导致的渲染
   const isZoomingRef = useRef(false);
+  // 鼠标悬停位置（用于画笔预览高亮）
+  const [hoverCell, setHoverCell] = useState<{ row: number; col: number } | null>(null);
 
   const cellSize = BASE_CELL_SIZE * zoom;
   const totalW = pattern.width * cellSize;
@@ -64,6 +68,42 @@ export function BeadGrid({
   // 无限画布：内容尺寸 = 图案尺寸 + 两侧的虚拟空间
   const contentW = totalW + CANVAS_PADDING * 2;
   const contentH = totalH + CANVAS_PADDING * 2;
+
+  // 根据画笔形状计算高亮单元格
+  const getHighlightCells = useCallback(
+    (row: number, col: number): Set<string> => {
+      const cells = new Set<string>();
+      if (selectedTool !== 'paint') return cells;
+      switch (brushShape) {
+        case 'dot':
+          cells.add(`${row},${col}`);
+          break;
+        case 'row':
+          for (let c = 0; c < pattern.width; c++) {
+            cells.add(`${row},${c}`);
+          }
+          break;
+        case 'col':
+          for (let r = 0; r < pattern.height; r++) {
+            cells.add(`${r},${col}`);
+          }
+          break;
+        case 'grid3x3':
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              const nr = row + dr;
+              const nc = col + dc;
+              if (nr >= 0 && nr < pattern.height && nc >= 0 && nc < pattern.width) {
+                cells.add(`${nr},${nc}`);
+              }
+            }
+          }
+          break;
+      }
+      return cells;
+    },
+    [selectedTool, brushShape, pattern.width, pattern.height]
+  );
 
   // Render the grid to canvas
   const render = useCallback(() => {
@@ -103,6 +143,11 @@ export function BeadGrid({
     const endRow = Math.min(pattern.height, Math.ceil((viewH - offsetY) / cellSize));
 
     // Draw beads
+    // 计算当前高亮的单元格集合
+    const highlightSet = hoverCell && selectedTool === 'paint' && brushShape !== 'dot'
+      ? getHighlightCells(hoverCell.row, hoverCell.col)
+      : null;
+
     for (let row = startRow; row < endRow; row++) {
       for (let col = startCol; col < endCol; col++) {
         const colorIndex = pattern.grid[row][col];
@@ -125,6 +170,19 @@ export function BeadGrid({
         ctx.beginPath();
         ctx.arc(cx, cy, cellSize * 0.07, 0, Math.PI * 2);
         ctx.fill();
+
+        // 画笔范围高亮预览
+        if (highlightSet && highlightSet.has(`${row},${col}`)) {
+          ctx.fillStyle = 'rgba(59, 130, 246, 0.25)';
+          ctx.beginPath();
+          ctx.arc(cx, cy, cellSize * 0.42, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(59, 130, 246, 0.6)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(cx, cy, cellSize * 0.42, 0, Math.PI * 2);
+          ctx.stroke();
+        }
 
         // Grid lines
         if (showGridLines) {
@@ -169,7 +227,7 @@ export function BeadGrid({
     }
 
     ctx.restore();
-  }, [pattern, colors, zoom, cellSize, showGridLines, showBeadCodes, scrollRef]);
+  }, [pattern, colors, zoom, cellSize, showGridLines, showBeadCodes, scrollRef, hoverCell, selectedTool, brushShape, getHighlightCells]);
 
   // 当 zoom 变化时，调整滚动位置以保持鼠标指向的点不变
   useEffect(() => {
@@ -313,6 +371,41 @@ export function BeadGrid({
     return () => scrollEl.removeEventListener('wheel', handleWheel);
   }, [onWheel, scrollRef]);
 
+  // Canvas 上的鼠标移动事件，用于画笔预览高亮
+  const handleCanvasMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (selectedTool !== 'paint' || brushShape === 'dot') {
+        if (hoverCell) setHoverCell(null);
+        return;
+      }
+      const scrollEl = scrollRef.current;
+      if (!scrollEl) return;
+
+      const rect = scrollEl.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      const offsetX = -(scrollEl.scrollLeft - CANVAS_PADDING);
+      const offsetY = -(scrollEl.scrollTop - CANVAS_PADDING);
+
+      const col = Math.floor((mouseX - offsetX) / cellSize);
+      const row = Math.floor((mouseY - offsetY) / cellSize);
+
+      if (row >= 0 && row < pattern.height && col >= 0 && col < pattern.width) {
+        if (!hoverCell || hoverCell.row !== row || hoverCell.col !== col) {
+          setHoverCell({ row, col });
+        }
+      } else {
+        if (hoverCell) setHoverCell(null);
+      }
+    },
+    [selectedTool, brushShape, cellSize, pattern, scrollRef, hoverCell]
+  );
+
+  const handleCanvasMouseLeave = useCallback(() => {
+    if (hoverCell) setHoverCell(null);
+  }, [hoverCell]);
+
   // Click handler - identify cell from coordinates
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
@@ -357,9 +450,15 @@ export function BeadGrid({
       // 不使用 React onWheel，因为它是 passive 的，无法 preventDefault
       // wheel 事件在 useEffect 中通过原生 addEventListener 添加
       onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
+      onMouseMove={(e) => {
+        onMouseMove(e);
+        handleCanvasMouseMove(e);
+      }}
       onMouseUp={onMouseUp}
-      onMouseLeave={onMouseUp}
+      onMouseLeave={() => {
+        onMouseUp();
+        handleCanvasMouseLeave();
+      }}
     >
       {/* Spacer div to create scrollable area */}
       <div style={{ width: contentW, height: contentH, pointerEvents: 'none' }} />

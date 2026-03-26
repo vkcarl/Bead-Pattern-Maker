@@ -68,6 +68,9 @@ export interface BeadCount {
   count: number;
 }
 
+/** 画笔形状：单点 / 整行 / 整列 / 九宫格 */
+export type BrushShape = 'dot' | 'row' | 'col' | 'grid3x3';
+
 export interface PatternState {
   originalImage: string | null;
   pattern: Pattern | null;
@@ -78,6 +81,7 @@ export interface PatternState {
   zoom: number;
   selectedTool: 'select' | 'paint' | 'eyedropper' | 'flood-erase';
   selectedColorIndex: number | null;
+  brushShape: BrushShape; // 画笔形状
   showGridLines: boolean;
   showBeadCodes: boolean;
   isProcessing: boolean;
@@ -91,6 +95,8 @@ export type PatternAction =
   | { type: 'CLEAR_IMAGE' }
   | { type: 'GENERATE_PATTERN'; payload: Pattern }
   | { type: 'SET_CELL'; payload: { row: number; col: number; colorIndex: number } }
+  | { type: 'SET_CELLS'; payload: { cells: { row: number; col: number }[]; colorIndex: number } }
+  | { type: 'SET_BRUSH_SHAPE'; payload: BrushShape }
   | { type: 'UNDO' }
   | { type: 'REDO' }
   | { type: 'SET_ZOOM'; payload: number }

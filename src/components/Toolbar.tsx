@@ -1,5 +1,7 @@
 'use client';
 
+import type { BrushShape } from '@/types';
+
 interface ToolbarProps {
   zoom: number;
   showGridLines: boolean;
@@ -7,6 +9,7 @@ interface ToolbarProps {
   canUndo: boolean;
   canRedo: boolean;
   selectedTool: 'select' | 'paint' | 'eyedropper' | 'flood-erase';
+  brushShape: BrushShape;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomReset: () => void;
@@ -15,6 +18,7 @@ interface ToolbarProps {
   onToggleGridLines: () => void;
   onToggleBeadCodes: () => void;
   onSelectTool: (tool: 'select' | 'paint' | 'eyedropper' | 'flood-erase') => void;
+  onSelectBrushShape: (shape: BrushShape) => void;
   backgroundRemoved: boolean;
   onToggleBackground: () => void;
 }
@@ -54,6 +58,47 @@ export function Toolbar(props: ToolbarProps) {
       <ToolButton active={props.selectedTool === 'paint'} onClick={() => props.onSelectTool('paint')} title="画笔 (B)">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.994 15.994 0 011.622-3.395m3.42 3.42a15.995 15.995 0 004.764-4.648l3.876-5.814a1.151 1.151 0 00-1.597-1.597L14.146 6.32a15.996 15.996 0 00-4.649 4.763m3.42 3.42a6.776 6.776 0 00-3.42-3.42" /></svg>
       </ToolButton>
+
+      {/* 画笔形状选择（仅在画笔工具激活时显示） */}
+      {props.selectedTool === 'paint' && (
+        <>
+          <div className="w-px h-4 bg-gray-200 mx-0.5" />
+          <div className="flex items-center gap-0.5 px-1 py-0.5 bg-gray-50 rounded-md">
+            <ToolButton active={props.brushShape === 'dot'} onClick={() => props.onSelectBrushShape('dot')} title="单点画笔 (1)">
+              <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+                <circle cx="8" cy="8" r="3" />
+              </svg>
+            </ToolButton>
+            <ToolButton active={props.brushShape === 'row'} onClick={() => props.onSelectBrushShape('row')} title="整行画笔 (2)">
+              <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+                <circle cx="3" cy="8" r="2" />
+                <circle cx="8" cy="8" r="2" />
+                <circle cx="13" cy="8" r="2" />
+              </svg>
+            </ToolButton>
+            <ToolButton active={props.brushShape === 'col'} onClick={() => props.onSelectBrushShape('col')} title="整列画笔 (3)">
+              <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+                <circle cx="8" cy="3" r="2" />
+                <circle cx="8" cy="8" r="2" />
+                <circle cx="8" cy="13" r="2" />
+              </svg>
+            </ToolButton>
+            <ToolButton active={props.brushShape === 'grid3x3'} onClick={() => props.onSelectBrushShape('grid3x3')} title="九宫格画笔 (4)">
+              <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+                <circle cx="3" cy="3" r="1.5" />
+                <circle cx="8" cy="3" r="1.5" />
+                <circle cx="13" cy="3" r="1.5" />
+                <circle cx="3" cy="8" r="1.5" />
+                <circle cx="8" cy="8" r="1.5" />
+                <circle cx="13" cy="8" r="1.5" />
+                <circle cx="3" cy="13" r="1.5" />
+                <circle cx="8" cy="13" r="1.5" />
+                <circle cx="13" cy="13" r="1.5" />
+              </svg>
+            </ToolButton>
+          </div>
+        </>
+      )}
       <ToolButton active={props.selectedTool === 'eyedropper'} onClick={() => props.onSelectTool('eyedropper')} title="取色笔 (I)">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M7 21l3-3m0 0l8.5-8.5a2.12 2.12 0 00-3-3L7 15m3 3l-3 3m0 0H4v-3" />

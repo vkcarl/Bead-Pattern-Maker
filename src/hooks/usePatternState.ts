@@ -1,6 +1,6 @@
 'use client';
 import { useReducer, useCallback } from 'react';
-import type { PatternState, PatternAction, Pattern } from '@/types';
+import type { PatternState, PatternAction, Pattern, BrushShape } from '@/types';
 import { DEFAULT_PALETTE_ID } from '@/data/palettes';
 import { removeBackground, floodErase } from '@/lib/flood-fill';
 
@@ -16,6 +16,7 @@ const initialState: PatternState = {
   zoom: 1,
   selectedTool: 'select',
   selectedColorIndex: null,
+  brushShape: 'dot' as BrushShape, // 默认单点画笔
   showGridLines: true,
   showBeadCodes: false,
   isProcessing: false,
@@ -47,6 +48,29 @@ function patternReducer(state: PatternState, action: PatternAction): PatternStat
       if (truncatedHistory.length > MAX_HISTORY) truncatedHistory.shift();
       return { ...state, pattern: newPattern, history: truncatedHistory, historyIndex: truncatedHistory.length - 1 };
     }
+    case 'SET_CELLS': {
+      if (!state.pattern) return state;
+      const { cells, colorIndex } = action.payload;
+      // 检查是否有实际变化
+      const hasChange = cells.some(({ row, col }) => {
+        if (row < 0 || row >= state.pattern!.height || col < 0 || col >= state.pattern!.width) return false;
+        return state.pattern!.grid[row][col] !== colorIndex;
+      });
+      if (!hasChange) return state;
+      const newGrid = state.pattern.grid.map(r => [...r]);
+      for (const { row, col } of cells) {
+        if (row >= 0 && row < state.pattern.height && col >= 0 && col < state.pattern.width) {
+          newGrid[row][col] = colorIndex;
+        }
+      }
+      const newPattern: Pattern = { ...state.pattern, grid: newGrid };
+      const truncatedHistory = state.history.slice(0, state.historyIndex + 1);
+      truncatedHistory.push(newPattern);
+      if (truncatedHistory.length > MAX_HISTORY) truncatedHistory.shift();
+      return { ...state, pattern: newPattern, history: truncatedHistory, historyIndex: truncatedHistory.length - 1 };
+    }
+    case 'SET_BRUSH_SHAPE':
+      return { ...state, brushShape: action.payload };
     case 'UNDO': {
       if (state.historyIndex <= 0) return state;
       const newIndex = state.historyIndex - 1;
