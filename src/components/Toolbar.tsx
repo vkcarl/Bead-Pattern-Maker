@@ -6,7 +6,7 @@ interface ToolbarProps {
   showBeadCodes: boolean;
   canUndo: boolean;
   canRedo: boolean;
-  selectedTool: 'select' | 'paint' | 'eyedropper';
+  selectedTool: 'select' | 'paint' | 'eyedropper' | 'flood-erase';
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomReset: () => void;
@@ -14,7 +14,7 @@ interface ToolbarProps {
   onRedo: () => void;
   onToggleGridLines: () => void;
   onToggleBeadCodes: () => void;
-  onSelectTool: (tool: 'select' | 'paint' | 'eyedropper') => void;
+  onSelectTool: (tool: 'select' | 'paint' | 'eyedropper' | 'flood-erase') => void;
   backgroundRemoved: boolean;
   onToggleBackground: () => void;
 }
@@ -58,6 +58,12 @@ export function Toolbar(props: ToolbarProps) {
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M7 21l3-3m0 0l8.5-8.5a2.12 2.12 0 00-3-3L7 15m3 3l-3 3m0 0H4v-3" />
           <circle cx="17" cy="7" r="2" />
+        </svg>
+      </ToolButton>
+      <ToolButton active={props.selectedTool === 'flood-erase'} onClick={() => props.onSelectTool('flood-erase')} title="色块消除 (E)">
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1.5M18.364 5.636l-1.06 1.06M21 12h-1.5M18.364 18.364l-1.06-1.06M12 19.5V21M7.757 17.303l-1.061 1.061M4.5 12H3M7.757 6.697L6.696 5.636" />
+          <circle cx="12" cy="12" r="4" strokeDasharray="3 2" />
         </svg>
       </ToolButton>
 

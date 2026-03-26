@@ -122,6 +122,14 @@ export default function Home() {
     [dispatch]
   );
 
+  // 色块消除处理
+  const handleFloodErase = useCallback(
+    (row: number, col: number) => {
+      dispatch({ type: 'FLOOD_ERASE', payload: { row, col } });
+    },
+    [dispatch]
+  );
+
   // Export handlers
   const handleExportPDF = useCallback(async (beadSize: number) => {
     if (state.pattern) await exportPatternAsPDF(state.pattern, currentColors, beadSize);
@@ -181,6 +189,9 @@ export default function Home() {
       }
       if (e.key === 'i' && !e.metaKey && !e.ctrlKey) {
         dispatch({ type: 'SET_TOOL', payload: 'eyedropper' });
+      }
+      if (e.key === 'e' && !e.metaKey && !e.ctrlKey) {
+        dispatch({ type: 'SET_TOOL', payload: 'flood-erase' });
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -335,6 +346,7 @@ export default function Home() {
                   selectedColorIndex={state.selectedColorIndex}
                   onCellClick={handleCellClick}
                   onEyedropperPick={handleEyedropperPick}
+                  onFloodErase={handleFloodErase}
                   onWheel={onWheel}
                   onMouseDown={onMouseDown}
                   onMouseMove={onMouseMove}

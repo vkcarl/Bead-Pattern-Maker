@@ -2,7 +2,7 @@
 import { useReducer, useCallback } from 'react';
 import type { PatternState, PatternAction, Pattern } from '@/types';
 import { DEFAULT_PALETTE_ID } from '@/data/palettes';
-import { removeBackground } from '@/lib/flood-fill';
+import { removeBackground, floodErase } from '@/lib/flood-fill';
 
 const MAX_HISTORY = 50;
 
@@ -105,6 +105,18 @@ function patternReducer(state: PatternState, action: PatternAction): PatternStat
     }
     case 'TOGGLE_AUTO_REMOVE_BG':
       return { ...state, autoRemoveBackground: !state.autoRemoveBackground };
+    case 'FLOOD_ERASE': {
+      if (!state.pattern) return state;
+      const { row, col } = action.payload;
+      const newGrid = floodErase(state.pattern.grid, state.pattern.width, state.pattern.height, row, col);
+      // 如果 grid 没有变化（点击了空 cell），不记录历史
+      if (newGrid === state.pattern.grid) return state;
+      const newPattern: Pattern = { ...state.pattern, grid: newGrid };
+      const truncatedHistory = state.history.slice(0, state.historyIndex + 1);
+      truncatedHistory.push(newPattern);
+      if (truncatedHistory.length > MAX_HISTORY) truncatedHistory.shift();
+      return { ...state, pattern: newPattern, history: truncatedHistory, historyIndex: truncatedHistory.length - 1 };
+    }
     default:
       return state;
   }

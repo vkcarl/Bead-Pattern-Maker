@@ -11,10 +11,11 @@ interface BeadGridProps {
   zoom: number;
   showGridLines: boolean;
   showBeadCodes: boolean;
-  selectedTool: 'select' | 'paint' | 'eyedropper';
+  selectedTool: 'select' | 'paint' | 'eyedropper' | 'flood-erase';
   selectedColorIndex: number | null;
   onCellClick: (row: number, col: number) => void;
   onEyedropperPick?: (colorIndex: number) => void; // 取色笔取色回调
+  onFloodErase?: (row: number, col: number) => void; // 色块消除回调
   onWheel: (e: WheelEvent) => void; // 改为原生 WheelEvent
   onMouseDown: (e: React.MouseEvent) => void;
   onMouseMove: (e: React.MouseEvent) => void;
@@ -41,6 +42,7 @@ export function BeadGrid({
   selectedColorIndex,
   onCellClick,
   onEyedropperPick,
+  onFloodErase,
   onWheel,
   onMouseDown,
   onMouseMove,
@@ -335,12 +337,17 @@ export function BeadGrid({
           if (colorIndex >= 0 && colorIndex < colors.length && onEyedropperPick) {
             onEyedropperPick(colorIndex);
           }
+        } else if (selectedTool === 'flood-erase') {
+          // 色块消除工具：点击时消除连通同色豆子
+          if (onFloodErase) {
+            onFloodErase(row, col);
+          }
         } else {
           onCellClick(row, col);
         }
       }
     },
-    [cellSize, pattern, colors, selectedTool, onCellClick, onEyedropperPick, scrollRef]
+    [cellSize, pattern, colors, selectedTool, onCellClick, onEyedropperPick, onFloodErase, scrollRef]
   );
 
   return (
@@ -362,7 +369,8 @@ export function BeadGrid({
         onClick={handleClick}
         className={`sticky top-0 left-0 ${
           selectedTool === 'paint' ? 'cursor-crosshair' : 
-          selectedTool === 'eyedropper' ? 'cursor-cell' : 'cursor-default'
+          selectedTool === 'eyedropper' ? 'cursor-cell' :
+          selectedTool === 'flood-erase' ? 'cursor-pointer' : 'cursor-default'
         }`}
         style={{ marginTop: -contentH }}
       />

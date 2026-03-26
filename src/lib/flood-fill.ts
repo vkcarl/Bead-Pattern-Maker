@@ -111,3 +111,57 @@ export function removeBackground(
 
   return result;
 }
+
+/**
+ * 色块消除：从指定位置出发，使用洪水填充算法消除该位置及其连通的同色豆子
+ * 将所有连通的同色 cell 设为 -1（空）
+ *
+ * @param grid 当前图案网格
+ * @param width 网格宽度
+ * @param height 网格高度
+ * @param startRow 起始行
+ * @param startCol 起始列
+ * @returns 消除后的新网格
+ */
+export function floodErase(
+  grid: number[][],
+  width: number,
+  height: number,
+  startRow: number,
+  startCol: number
+): number[][] {
+  const targetColor = grid[startRow][startCol];
+
+  // 如果点击的是空 cell，不做任何操作
+  if (targetColor < 0) return grid;
+
+  const result = grid.map((row) => [...row]);
+  const visited = new Uint8Array(width * height);
+
+  const queue: [number, number][] = [[startRow, startCol]];
+  visited[startRow * width + startCol] = 1;
+
+  while (queue.length > 0) {
+    const [r, c] = queue.shift()!;
+    result[r][c] = -1; // 消除该豆子
+
+    const neighbors: [number, number][] = [
+      [r - 1, c],
+      [r + 1, c],
+      [r, c - 1],
+      [r, c + 1],
+    ];
+
+    for (const [nr, nc] of neighbors) {
+      if (nr < 0 || nr >= height || nc < 0 || nc >= width) continue;
+      const nKey = nr * width + nc;
+      if (visited[nKey]) continue;
+      if (result[nr][nc] !== targetColor) continue;
+
+      visited[nKey] = 1;
+      queue.push([nr, nc]);
+    }
+  }
+
+  return result;
+}

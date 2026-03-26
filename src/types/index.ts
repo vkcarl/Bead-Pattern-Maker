@@ -76,7 +76,7 @@ export interface PatternState {
   boardWidth: number;
   boardHeight: number;
   zoom: number;
-  selectedTool: 'select' | 'paint' | 'eyedropper';
+  selectedTool: 'select' | 'paint' | 'eyedropper' | 'flood-erase';
   selectedColorIndex: number | null;
   showGridLines: boolean;
   showBeadCodes: boolean;
@@ -96,8 +96,9 @@ export type PatternAction =
   | { type: 'SET_ZOOM'; payload: number }
   | { type: 'CLEAR_SHOULD_CENTER' }
   | { type: 'SET_BOARD_SIZE'; payload: { width: number; height: number } }
-  | { type: 'SET_TOOL'; payload: 'select' | 'paint' | 'eyedropper' }
+  | { type: 'SET_TOOL'; payload: 'select' | 'paint' | 'eyedropper' | 'flood-erase' }
   | { type: 'SET_EYEDROPPER_COLOR'; payload: number }
+  | { type: 'FLOOD_ERASE'; payload: { row: number; col: number } }
   | { type: 'SET_SELECTED_COLOR'; payload: number }
   | { type: 'TOGGLE_GRID_LINES' }
   | { type: 'TOGGLE_BEAD_CODES' }
