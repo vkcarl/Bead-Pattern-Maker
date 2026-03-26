@@ -88,6 +88,7 @@ export interface PatternState {
   shouldCenter: boolean; // 是否需要居中显示图案
   currentPaletteId: string; // 当前选中的色板 ID
   autoRemoveBackground: boolean; // 生成图案时是否自动去除背景
+  denoiseThreshold: number; // 杂色消除阈值（CIEDE2000），0 表示关闭
 }
 
 export type PatternAction =
@@ -112,4 +113,6 @@ export type PatternAction =
   | { type: 'SET_PALETTE'; payload: string }
   | { type: 'REMOVE_BACKGROUND' }
   | { type: 'RESTORE_BACKGROUND'; payload: number[][] }
-  | { type: 'TOGGLE_AUTO_REMOVE_BG' };
+  | { type: 'TOGGLE_AUTO_REMOVE_BG' }
+  | { type: 'SET_DENOISE_THRESHOLD'; payload: number }
+  | { type: 'APPLY_DENOISE'; payload: number[][] };

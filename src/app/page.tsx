@@ -6,6 +6,7 @@ import { useZoomPan } from '@/hooks/useZoomPan';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { processImage } from '@/lib/image-processor';
 import { removeBackground } from '@/lib/flood-fill';
+import { denoisePattern } from '@/lib/denoise';
 import { exportPatternAsPDF } from '@/lib/export-pdf';
 import { exportPatternAsPNG, exportPatternWithCodesPNG } from '@/lib/export-image';
 import { PaletteManager, setActivePaletteById } from '@/lib/palette';
@@ -82,6 +83,13 @@ export default function Home() {
       dispatch({ type: 'SET_PROCESSING', payload: false });
     }
   }, [state.originalImage, state.boardWidth, state.boardHeight, state.autoRemoveBackground, dispatch]);
+
+  // 杂色消除：基于当前画布最新状态执行
+  const handleDenoise = useCallback(() => {
+    if (!state.pattern || state.denoiseThreshold <= 0) return;
+    const newGrid = denoisePattern(state.pattern, currentColors, state.denoiseThreshold);
+    dispatch({ type: 'APPLY_DENOISE', payload: newGrid });
+  }, [state.pattern, state.denoiseThreshold, currentColors, dispatch]);
 
   // 切换背景去除状态
   const handleToggleBackground = useCallback(() => {
@@ -336,6 +344,41 @@ export default function Home() {
             onSizeChange={(w, h) => dispatch({ type: 'SET_BOARD_SIZE', payload: { width: w, height: h } })}
             onConvert={handleConvert}
           />
+
+          {/* 杂色消除（生成图案后可用） */}
+          {state.pattern && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-gray-700">杂色消除</h3>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-600">消除强度</span>
+                  <span className="text-xs text-gray-400 tabular-nums">{state.denoiseThreshold === 0 ? '关闭' : state.denoiseThreshold}</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={30}
+                  step={1}
+                  value={state.denoiseThreshold}
+                  onChange={e => dispatch({ type: 'SET_DENOISE_THRESHOLD', payload: Number(e.target.value) })}
+                  className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+                <div className="flex justify-between text-[10px] text-gray-400">
+                  <span>关闭</span>
+                  <span>轻微</span>
+                  <span>强力</span>
+                </div>
+              </div>
+              <button
+                onClick={handleDenoise}
+                disabled={state.denoiseThreshold <= 0}
+                className="w-full py-1.5 px-3 bg-amber-500 text-white text-xs font-medium rounded-lg hover:bg-amber-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              >
+                应用杂色消除
+              </button>
+              <p className="text-[11px] text-gray-400 leading-tight">基于当前画布状态消除杂色豆子，使颜色过渡更自然。可多次应用，支持撤销。建议从 8~12 开始尝试</p>
+            </div>
+          )}
 
           {/* Color picker (only after pattern generated) */}
           {state.pattern && (

@@ -23,6 +23,7 @@ const initialState: PatternState = {
   shouldCenter: false, // 是否需要居中显示图案
   currentPaletteId: DEFAULT_PALETTE_ID, // 当前选中的色板 ID
   autoRemoveBackground: false, // 默认关闭自动去除背景
+  denoiseThreshold: 0, // 默认关闭杂色消除
 };
 
 function patternReducer(state: PatternState, action: PatternAction): PatternState {
@@ -129,6 +130,16 @@ function patternReducer(state: PatternState, action: PatternAction): PatternStat
     }
     case 'TOGGLE_AUTO_REMOVE_BG':
       return { ...state, autoRemoveBackground: !state.autoRemoveBackground };
+    case 'SET_DENOISE_THRESHOLD':
+      return { ...state, denoiseThreshold: action.payload };
+    case 'APPLY_DENOISE': {
+      if (!state.pattern) return state;
+      const newPattern: Pattern = { ...state.pattern, grid: action.payload };
+      const truncatedHistory = state.history.slice(0, state.historyIndex + 1);
+      truncatedHistory.push(newPattern);
+      if (truncatedHistory.length > MAX_HISTORY) truncatedHistory.shift();
+      return { ...state, pattern: newPattern, history: truncatedHistory, historyIndex: truncatedHistory.length - 1 };
+    }
     case 'FLOOD_ERASE': {
       if (!state.pattern) return state;
       const { row, col } = action.payload;
