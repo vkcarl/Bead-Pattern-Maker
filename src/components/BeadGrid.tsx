@@ -13,6 +13,7 @@ interface BeadGridProps {
   showBeadCodes: boolean;
   selectedTool: 'select' | 'paint' | 'eyedropper' | 'flood-erase';
   selectedColorIndex: number | null;
+  highlightColorIndex: number | null; // 高亮颜色索引（仅取色笔设置）
   brushShape: BrushShape;
   onCellClick: (row: number, col: number) => void;
   onEyedropperPick?: (colorIndex: number) => void; // 取色笔取色回调
@@ -41,6 +42,7 @@ export function BeadGrid({
   showBeadCodes,
   selectedTool,
   selectedColorIndex,
+  highlightColorIndex,
   brushShape,
   onCellClick,
   onEyedropperPick,
@@ -171,6 +173,13 @@ export function BeadGrid({
         ctx.arc(cx, cy, cellSize * 0.07, 0, Math.PI * 2);
         ctx.fill();
 
+        // 选中颜色高亮：为所有使用当前高亮颜色的豆子绘制格子边缘高亮
+        if (highlightColorIndex !== null && highlightColorIndex >= 0 && colorIndex === highlightColorIndex) {
+          ctx.strokeStyle = 'rgba(59, 130, 246, 0.85)';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
+        }
+
         // 画笔范围高亮预览
         if (highlightSet && highlightSet.has(`${row},${col}`)) {
           ctx.fillStyle = 'rgba(59, 130, 246, 0.25)';
@@ -227,7 +236,7 @@ export function BeadGrid({
     }
 
     ctx.restore();
-  }, [pattern, colors, zoom, cellSize, showGridLines, showBeadCodes, scrollRef, hoverCell, selectedTool, brushShape, getHighlightCells]);
+  }, [pattern, colors, zoom, cellSize, showGridLines, showBeadCodes, scrollRef, hoverCell, selectedTool, brushShape, getHighlightCells, highlightColorIndex]);
 
   // 当 zoom 变化时，调整滚动位置以保持鼠标指向的点不变
   useEffect(() => {

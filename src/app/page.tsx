@@ -343,7 +343,9 @@ export default function Home() {
               pattern={state.pattern}
               colors={currentColors}
               selectedColorIndex={state.selectedColorIndex}
+              highlightColorIndex={state.highlightColorIndex}
               onSelectColor={(idx) => dispatch({ type: 'SET_SELECTED_COLOR', payload: idx })}
+              onClearHighlight={() => dispatch({ type: 'CLEAR_HIGHLIGHT_COLOR' })}
             />
           )}
 
@@ -406,6 +408,7 @@ export default function Home() {
                   showBeadCodes={state.showBeadCodes}
                   selectedTool={state.selectedTool}
                   selectedColorIndex={state.selectedColorIndex}
+                  highlightColorIndex={state.highlightColorIndex}
                   brushShape={state.brushShape}
                   onCellClick={handleCellClick}
                   onEyedropperPick={handleEyedropperPick}

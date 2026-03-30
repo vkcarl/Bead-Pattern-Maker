@@ -6,10 +6,12 @@ interface ColorPickerProps {
   pattern: Pattern | null;
   colors: BeadColor[]; // 当前色板的颜色数组
   selectedColorIndex: number | null;
+  highlightColorIndex: number | null; // 高亮颜色索引（取色笔设置）
   onSelectColor: (index: number) => void;
+  onClearHighlight: () => void; // 取消高亮回调
 }
 
-export function ColorPicker({ pattern, colors, selectedColorIndex, onSelectColor }: ColorPickerProps) {
+export function ColorPicker({ pattern, colors, selectedColorIndex, highlightColorIndex, onSelectColor, onClearHighlight }: ColorPickerProps) {
   const [search, setSearch] = useState('');
 
   const usedColorIndices = useMemo(() => {
@@ -69,6 +71,28 @@ export function ColorPicker({ pattern, colors, selectedColorIndex, onSelectColor
             <p className="text-xs text-blue-700 font-medium truncate">已选中颜色</p>
             <p className="text-xs text-blue-600 truncate">{colors[selectedColorIndex].id} {colors[selectedColorIndex].name}</p>
           </div>
+        </div>
+      )}
+      {/* 高亮颜色提示及取消按钮 */}
+      {highlightColorIndex !== null && highlightColorIndex >= 0 && highlightColorIndex < colors.length && (
+        <div className="flex items-center gap-2 py-1.5 px-2 bg-amber-50 rounded-md border border-amber-200">
+          <span
+            className="w-5 h-5 rounded-sm border-2 border-amber-500 ring-1 ring-amber-300 flex-shrink-0"
+            style={{ backgroundColor: colors[highlightColorIndex].hex }}
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-amber-700 font-medium truncate">高亮中</p>
+            <p className="text-xs text-amber-600 truncate">{colors[highlightColorIndex].id} {colors[highlightColorIndex].name}</p>
+          </div>
+          <button
+            onClick={onClearHighlight}
+            title="取消高亮"
+            className="flex-shrink-0 p-1 rounded hover:bg-amber-100 text-amber-500 hover:text-amber-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       )}
       {!search && usedColors.length > 0 && (
