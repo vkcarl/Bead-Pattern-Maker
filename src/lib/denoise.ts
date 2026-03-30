@@ -1,20 +1,31 @@
 /**
  * 杂色消除模块
  * 
- * 对已生成的拼豆图案进行非重叠的 3×3 分块扫描，
- * 如果块内所有颜色与众数颜色的 CIEDE2000 色差均小于阈值，
- * 则将该块内所有豆子统一为众数颜色。
+ * 采用"渐变碎片统一"策略：
+ * 杂色的本质是渐变区域因分辨率不足而产生的近似色碎片——
+ * 这些区域内颜色分布均匀，没有明显主导色，但彼此色差很小。
  * 
- * 采用"逐区域"策略：图案被划分为互不重叠的块，
- * 每个块独立处理，已处理的豆子不会影响其他块的判断，
- * 避免颜色"滚雪球"式侵蚀。
+ * 对每个豆子检查其 3×3 邻域，找到邻域内的众数颜色。
+ * 如果当前豆子不是众数颜色，且它与众数的色差在阈值内，
+ * 且众数占比在 [下限, 上限] 范围内（即颜色分布较"碎"），
+ * 则将该豆子替换为众数颜色。
+ * 
+ * 当众数占比过高时（某种颜色占绝对主导），少数派豆子
+ * 更可能是有意义的细节（如嘴巴、眼睛），不应消除。
+ * 
+ * 始终从原始 grid 读取、写入 result，避免"滚雪球"式侵蚀。
  */
 
 import type { Pattern, BeadColor } from '@/types';
 import { rgbToLab } from './color-convert';
 import { ciede2000 } from './color-diff';
 
-const BLOCK_SIZE = 3;
+/** 邻域半径：1 表示 3×3 */
+const RADIUS = 1;
+/** 众数占比下限：低于此值说明颜色过于分散，可能是多色交界处，不替换 */
+const MODE_RATIO_MIN = 0.22;
+/** 众数占比上限：高于此值说明某色占绝对主导，少数派可能是有意义的细节，不替换 */
+const MODE_RATIO_MAX = 0.5;
 
 /**
  * 对拼豆图案执行杂色消除
@@ -53,67 +64,62 @@ export function denoisePattern(
   // 复制一份 grid 用于输出
   const result = grid.map(row => [...row]);
 
-  // 非重叠分块扫描：步长等于块大小，每个块独立处理
-  for (let blockRow = 0; blockRow < height; blockRow += BLOCK_SIZE) {
-    for (let blockCol = 0; blockCol < width; blockCol += BLOCK_SIZE) {
-      // 计算当前块的实际范围（处理边缘不足 BLOCK_SIZE 的情况）
-      const rowEnd = Math.min(blockRow + BLOCK_SIZE, height);
-      const colEnd = Math.min(blockCol + BLOCK_SIZE, width);
+  // 逐像素扫描，对每个豆子检查其邻域
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < width; col++) {
+      const currentColor = grid[row][col];
+      // 跳过空格子
+      if (currentColor < 0) continue;
 
-      // 收集块内所有非空格子的颜色索引及其位置
-      const blockCells: { row: number; col: number; colorIndex: number }[] = [];
-      for (let r = blockRow; r < rowEnd; r++) {
-        for (let c = blockCol; c < colEnd; c++) {
-          const ci = grid[r][c]; // 始终从原始 grid 读取，不受其他块影响
+      // 收集 3×3 邻域内所有非空邻居的颜色（包含自身）
+      const neighborColors: number[] = [];
+      for (let dr = -RADIUS; dr <= RADIUS; dr++) {
+        for (let dc = -RADIUS; dc <= RADIUS; dc++) {
+          const nr = row + dr;
+          const nc = col + dc;
+          if (nr < 0 || nr >= height || nc < 0 || nc >= width) continue;
+          const ci = grid[nr][nc]; // 始终从原始 grid 读取
           if (ci >= 0) {
-            blockCells.push({ row: r, col: c, colorIndex: ci });
+            neighborColors.push(ci);
           }
         }
       }
 
-      // 如果块内有效颜色不足 2 个，跳过
-      if (blockCells.length < 2) continue;
+      // 邻居不足 2 个，跳过
+      if (neighborColors.length < 2) continue;
 
-      // 统计颜色频率，找到众数颜色
+      // 统计邻域内颜色频率，找到众数颜色
       const freq = new Map<number, number>();
-      let modeColor = blockCells[0].colorIndex;
+      let modeColor = neighborColors[0];
       let modeCount = 0;
-      for (const cell of blockCells) {
-        const count = (freq.get(cell.colorIndex) || 0) + 1;
-        freq.set(cell.colorIndex, count);
+      for (const ci of neighborColors) {
+        const count = (freq.get(ci) || 0) + 1;
+        freq.set(ci, count);
         if (count > modeCount) {
           modeCount = count;
-          modeColor = cell.colorIndex;
+          modeColor = ci;
         }
       }
 
-      // 如果所有颜色都一样，跳过
-      if (freq.size === 1) continue;
+      // 如果当前豆子已经是众数颜色，不需要处理
+      if (currentColor === modeColor) continue;
 
-      // 计算块内所有颜色与众数颜色的 CIEDE2000 色差
+      // 检查众数占比是否在合理范围内：
+      // - 太低（< 22%）：颜色过于分散，可能是多色交界处，不替换
+      // - 太高（> 50%）：某色占绝对主导，少数派可能是有意义的细节，不替换
+      // - 在范围内：颜色分布较"碎"，是渐变碎片区域，应该统一
+      const modeRatio = modeCount / neighborColors.length;
+      if (modeRatio < MODE_RATIO_MIN || modeRatio > MODE_RATIO_MAX) continue;
+
+      // 计算当前豆子与众数颜色的 CIEDE2000 色差
+      const currentLab = getLabForIndex(currentColor);
       const modeLab = getLabForIndex(modeColor);
-      if (!modeLab) continue;
+      if (!currentLab || !modeLab) continue;
 
-      let allWithinThreshold = true;
-      for (const cell of blockCells) {
-        if (cell.colorIndex === modeColor) continue;
-        const lab = getLabForIndex(cell.colorIndex);
-        if (!lab) {
-          allWithinThreshold = false;
-          break;
-        }
-        const diff = ciede2000(modeLab, lab);
-        if (diff > threshold) {
-          allWithinThreshold = false;
-          break;
-        }
-      }
-
-      // 如果所有颜色都在阈值内，统一为众数颜色
-      if (allWithinThreshold) {
-        for (const cell of blockCells) {
-          result[cell.row][cell.col] = modeColor;
-        }
+      const diff = ciede2000(currentLab, modeLab);
+      if (diff <= threshold) {
+        // 当前豆子处于渐变碎片区域，统一为众数颜色
+        result[row][col] = modeColor;
       }
     }
   }
