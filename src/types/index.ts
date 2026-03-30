@@ -81,6 +81,7 @@ export interface PatternState {
   zoom: number;
   selectedTool: 'select' | 'paint' | 'eyedropper' | 'flood-erase';
   selectedColorIndex: number | null;
+  highlightColorIndex: number | null; // 高亮颜色索引（仅取色笔设置，独立于选中颜色）
   brushShape: BrushShape; // 画笔形状
   showGridLines: boolean;
   showBeadCodes: boolean;
@@ -107,6 +108,7 @@ export type PatternAction =
   | { type: 'SET_EYEDROPPER_COLOR'; payload: number }
   | { type: 'FLOOD_ERASE'; payload: { row: number; col: number } }
   | { type: 'SET_SELECTED_COLOR'; payload: number }
+  | { type: 'CLEAR_HIGHLIGHT_COLOR' }
   | { type: 'TOGGLE_GRID_LINES' }
   | { type: 'TOGGLE_BEAD_CODES' }
   | { type: 'SET_PROCESSING'; payload: boolean }

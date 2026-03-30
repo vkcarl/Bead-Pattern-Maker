@@ -16,6 +16,7 @@ const initialState: PatternState = {
   zoom: 1,
   selectedTool: 'select',
   selectedColorIndex: null,
+  highlightColorIndex: null, // 高亮颜色索引（仅取色笔设置）
   brushShape: 'dot' as BrushShape, // 默认单点画笔
   showGridLines: true,
   showBeadCodes: false,
@@ -91,10 +92,12 @@ function patternReducer(state: PatternState, action: PatternAction): PatternStat
     case 'SET_TOOL':
       return { ...state, selectedTool: action.payload };
     case 'SET_EYEDROPPER_COLOR':
-      // 取色笔选中颜色后，更新selectedColorIndex但不切换工具
-      return { ...state, selectedColorIndex: action.payload };
+      // 取色笔选中颜色后，更新selectedColorIndex和highlightColorIndex
+      return { ...state, selectedColorIndex: action.payload, highlightColorIndex: action.payload };
     case 'SET_SELECTED_COLOR':
       return { ...state, selectedColorIndex: action.payload, selectedTool: 'paint' };
+    case 'CLEAR_HIGHLIGHT_COLOR':
+      return { ...state, highlightColorIndex: null };
     case 'TOGGLE_GRID_LINES':
       return { ...state, showGridLines: !state.showGridLines };
     case 'TOGGLE_BEAD_CODES':
@@ -110,6 +113,7 @@ function patternReducer(state: PatternState, action: PatternAction): PatternStat
         history: [],
         historyIndex: -1,
         selectedColorIndex: null,
+        highlightColorIndex: null,
       };
     case 'REMOVE_BACKGROUND': {
       if (!state.pattern) return state;
