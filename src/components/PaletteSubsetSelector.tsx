@@ -28,7 +28,8 @@ export function PaletteSubsetSelector({
   isAutoLimiting,
   hasImage,
 }: PaletteSubsetSelectorProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(false); // 整个面板是否展开
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false); // 颜色选择器是否展开
   const [searchQuery, setSearchQuery] = useState('');
 
   // 搜索过滤
@@ -59,26 +60,70 @@ export function PaletteSubsetSelector({
   const selectedCount = selectedIndices.size;
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 cursor-pointer">
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      {/* 面板头部：开关 + 摘要 + 收缩按钮 */}
+      <div
+        className="flex items-center justify-between px-3 py-2 bg-gray-50 cursor-pointer select-none hover:bg-gray-100 transition-colors"
+        onClick={() => enabled && setIsPanelOpen(!isPanelOpen)}
+      >
+        <label className="flex items-center gap-2 cursor-pointer" onClick={e => e.stopPropagation()}>
           <input
             type="checkbox"
             checked={enabled}
-            onChange={onToggleEnabled}
+            onChange={() => {
+              onToggleEnabled();
+              // 开启时自动展开面板，关闭时自动收起
+              if (!enabled) setIsPanelOpen(true);
+              else setIsPanelOpen(false);
+            }}
             className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
           />
           <span className="text-sm font-medium text-gray-700">限色生成</span>
         </label>
-        {enabled && (
-          <span className="text-xs text-gray-500">
-            已选 {selectedCount} / {colors.length} 色
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {enabled && (
+            <span className="text-xs text-gray-500">
+              已选 {selectedCount} / {colors.length} 色
+            </span>
+          )}
+          {enabled && (
+            <svg
+              className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isPanelOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          )}
+        </div>
       </div>
 
-      {enabled && (
-        <div className="space-y-2">
+      {/* 已选颜色缩略预览（面板收起时显示） */}
+      {enabled && !isPanelOpen && selectedCount > 0 && (
+        <div className="px-3 py-1.5 border-t border-gray-100 bg-white">
+          <div className="flex flex-wrap gap-1">
+            {Array.from(selectedIndices)
+              .sort((a, b) => a - b)
+              .slice(0, 24)
+              .map(idx => (
+                <div
+                  key={idx}
+                  className="w-4 h-4 rounded-sm border border-gray-200"
+                  style={{ backgroundColor: colors[idx].hex }}
+                  title={`${colors[idx].id} ${colors[idx].name}`}
+                />
+              ))}
+            {selectedCount > 24 && (
+              <span className="text-[10px] text-gray-400 self-center">+{selectedCount - 24}</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 可收缩的面板内容 */}
+      {enabled && isPanelOpen && (
+        <div className="px-3 py-2 border-t border-gray-100 bg-white space-y-2">
           <p className="text-[11px] text-gray-400 leading-tight">
             只使用选中的颜色生成图案，减少近似色让画面更干净
           </p>
@@ -120,12 +165,12 @@ export function PaletteSubsetSelector({
             </button>
             <div className="flex-1" />
             <button
-              onClick={() => setIsExpanded(!isExpanded)}
+              onClick={() => setIsColorPickerOpen(!isColorPickerOpen)}
               className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-0.5"
             >
-              {isExpanded ? '收起' : '展开选色'}
+              {isColorPickerOpen ? '收起' : '展开选色'}
               <svg
-                className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                className={`w-3 h-3 transition-transform ${isColorPickerOpen ? 'rotate-180' : ''}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -135,8 +180,8 @@ export function PaletteSubsetSelector({
             </button>
           </div>
 
-          {/* 已选颜色预览 */}
-          {!isExpanded && selectedCount > 0 && (
+          {/* 已选颜色预览（选色面板收起时显示） */}
+          {!isColorPickerOpen && selectedCount > 0 && (
             <div className="flex flex-wrap gap-1">
               {Array.from(selectedIndices)
                 .sort((a, b) => a - b)
@@ -159,7 +204,7 @@ export function PaletteSubsetSelector({
           )}
 
           {/* 展开的颜色选择面板 */}
-          {isExpanded && (
+          {isColorPickerOpen && (
             <div className="space-y-2">
               {/* 搜索框 */}
               <input
