@@ -24,6 +24,7 @@ import { PaletteSelector } from '@/components/PaletteSelector';
 import { PaletteImporter } from '@/components/PaletteImporter';
 import { ColorReplacer } from '@/components/ColorReplacer';
 import { PaletteSubsetSelector } from '@/components/PaletteSubsetSelector';
+import { WhatsNewModal } from '@/components/WhatsNewModal';
 
 export default function Home() {
   const { state, dispatch, canUndo, canRedo, undo, redo } = usePatternState();
@@ -577,6 +578,9 @@ export default function Home() {
         onClose={() => setShowImporter(false)}
         onImportSuccess={handleImportSuccess}
       />
+
+      {/* 版本更新弹窗 */}
+      <WhatsNewModal />
     </div>
   );
 }
