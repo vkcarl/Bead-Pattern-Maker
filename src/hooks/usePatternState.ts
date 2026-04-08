@@ -156,6 +156,28 @@ function patternReducer(state: PatternState, action: PatternAction): PatternStat
       if (truncatedHistory.length > MAX_HISTORY) truncatedHistory.shift();
       return { ...state, pattern: newPattern, history: truncatedHistory, historyIndex: truncatedHistory.length - 1 };
     }
+    case 'REPLACE_COLOR': {
+      if (!state.pattern) return state;
+      const { sourceIndex, targetIndex } = action.payload;
+      if (sourceIndex === targetIndex) return state;
+      // 检查是否有需要替换的格子
+      let hasChange = false;
+      for (const row of state.pattern.grid) {
+        for (const idx of row) {
+          if (idx === sourceIndex) { hasChange = true; break; }
+        }
+        if (hasChange) break;
+      }
+      if (!hasChange) return state;
+      const newGrid = state.pattern.grid.map(r =>
+        r.map(idx => (idx === sourceIndex ? targetIndex : idx))
+      );
+      const newPattern: Pattern = { ...state.pattern, grid: newGrid };
+      const truncatedHistory = state.history.slice(0, state.historyIndex + 1);
+      truncatedHistory.push(newPattern);
+      if (truncatedHistory.length > MAX_HISTORY) truncatedHistory.shift();
+      return { ...state, pattern: newPattern, history: truncatedHistory, historyIndex: truncatedHistory.length - 1 };
+    }
     default:
       return state;
   }

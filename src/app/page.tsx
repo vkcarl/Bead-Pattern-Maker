@@ -21,6 +21,7 @@ import { ColorPicker } from '@/components/ColorPicker';
 import { ExportPanel } from '@/components/ExportPanel';
 import { PaletteSelector } from '@/components/PaletteSelector';
 import { PaletteImporter } from '@/components/PaletteImporter';
+import { ColorReplacer } from '@/components/ColorReplacer';
 
 export default function Home() {
   const { state, dispatch, canUndo, canRedo, undo, redo } = usePatternState();
@@ -193,6 +194,20 @@ export default function Home() {
   const handleExportPNG = useCallback((beadSize: number) => {
     if (state.pattern) exportPatternWithCodesPNG(state.pattern, currentColors, beadSize);
   }, [state.pattern, currentColors]);
+
+  // 全局颜色替换处理
+  const handleReplaceColor = useCallback((sourceIndex: number, targetIndex: number) => {
+    dispatch({ type: 'REPLACE_COLOR', payload: { sourceIndex, targetIndex } });
+  }, [dispatch]);
+
+  // 高亮颜色处理（用于全局颜色替换面板选中源颜色时）
+  const handleHighlightColor = useCallback((colorIndex: number) => {
+    dispatch({ type: 'SET_EYEDROPPER_COLOR', payload: colorIndex });
+  }, [dispatch]);
+
+  const handleClearHighlight = useCallback(() => {
+    dispatch({ type: 'CLEAR_HIGHLIGHT_COLOR' });
+  }, [dispatch]);
 
   // 色板选择处理
   const handleSelectPalette = useCallback((paletteId: string) => {
@@ -388,7 +403,18 @@ export default function Home() {
               selectedColorIndex={state.selectedColorIndex}
               highlightColorIndex={state.highlightColorIndex}
               onSelectColor={(idx) => dispatch({ type: 'SET_SELECTED_COLOR', payload: idx })}
-              onClearHighlight={() => dispatch({ type: 'CLEAR_HIGHLIGHT_COLOR' })}
+              onClearHighlight={handleClearHighlight}
+              colorReplacerSlot={
+                <ColorReplacer
+                  pattern={state.pattern!}
+                  colors={currentColors}
+                  highlightColorIndex={state.highlightColorIndex}
+                  onReplace={handleReplaceColor}
+                  onHighlight={handleHighlightColor}
+                  onClearHighlight={handleClearHighlight}
+                  onSelectColor={(idx) => dispatch({ type: 'SET_SELECTED_COLOR', payload: idx })}
+                />
+              }
             />
           )}
 

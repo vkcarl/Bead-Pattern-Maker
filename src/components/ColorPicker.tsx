@@ -1,6 +1,7 @@
 'use client';
 import { useState, useMemo } from 'react';
 import type { Pattern, BeadColor } from '@/types';
+import type { ReactNode } from 'react';
 
 interface ColorPickerProps {
   pattern: Pattern | null;
@@ -9,9 +10,10 @@ interface ColorPickerProps {
   highlightColorIndex: number | null; // 高亮颜色索引（取色笔设置）
   onSelectColor: (index: number) => void;
   onClearHighlight: () => void; // 取消高亮回调
+  colorReplacerSlot?: ReactNode; // 全局颜色替换组件插槽
 }
 
-export function ColorPicker({ pattern, colors, selectedColorIndex, highlightColorIndex, onSelectColor, onClearHighlight }: ColorPickerProps) {
+export function ColorPicker({ pattern, colors, selectedColorIndex, highlightColorIndex, onSelectColor, onClearHighlight, colorReplacerSlot }: ColorPickerProps) {
   const [search, setSearch] = useState('');
 
   const usedColorIndices = useMemo(() => {
@@ -95,6 +97,8 @@ export function ColorPicker({ pattern, colors, selectedColorIndex, highlightColo
           </button>
         </div>
       )}
+      {/* 全局颜色替换插槽 - 位于"高亮中"和"已使用"之间 */}
+      {colorReplacerSlot}
       {!search && usedColors.length > 0 && (
         <div>
           <p className="text-xs text-gray-400 mb-1">已使用</p>

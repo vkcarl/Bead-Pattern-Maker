@@ -117,4 +117,5 @@ export type PatternAction =
   | { type: 'RESTORE_BACKGROUND'; payload: number[][] }
   | { type: 'TOGGLE_AUTO_REMOVE_BG' }
   | { type: 'SET_DENOISE_THRESHOLD'; payload: number }
-  | { type: 'APPLY_DENOISE'; payload: number[][] };
+  | { type: 'APPLY_DENOISE'; payload: number[][] }
+  | { type: 'REPLACE_COLOR'; payload: { sourceIndex: number; targetIndex: number } };
