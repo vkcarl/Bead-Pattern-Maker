@@ -10,6 +10,7 @@ import { denoisePattern } from '@/lib/denoise';
 import { exportPatternAsPDF } from '@/lib/export-pdf';
 import { exportPatternAsPNG, exportPatternWithCodesPNG } from '@/lib/export-image';
 import { PaletteManager, setActivePaletteById } from '@/lib/palette';
+import { autoLimitColors } from '@/lib/auto-limit-colors';
 import type { BrushShape } from '@/types';
 
 import { ImageUploader } from '@/components/ImageUploader';
@@ -22,6 +23,7 @@ import { ExportPanel } from '@/components/ExportPanel';
 import { PaletteSelector } from '@/components/PaletteSelector';
 import { PaletteImporter } from '@/components/PaletteImporter';
 import { ColorReplacer } from '@/components/ColorReplacer';
+import { PaletteSubsetSelector } from '@/components/PaletteSubsetSelector';
 
 export default function Home() {
   const { state, dispatch, canUndo, canRedo, undo, redo } = usePatternState();
@@ -44,6 +46,11 @@ export default function Home() {
   // 手机端侧边栏折叠状态
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  // 色板子集选择状态
+  const [subsetEnabled, setSubsetEnabled] = useState(false);
+  const [selectedSubsetIndices, setSelectedSubsetIndices] = useState<Set<number>>(new Set());
+  const [isAutoLimiting, setIsAutoLimiting] = useState(false);
+
   // 获取当前色板的颜色数组
   const currentPalette = useMemo(() => {
     return PaletteManager.getPaletteById(state.currentPaletteId) || PaletteManager.getCurrentPalette();
@@ -54,6 +61,8 @@ export default function Home() {
   // 切换色板时同步更新颜色匹配器
   useEffect(() => {
     setActivePaletteById(state.currentPaletteId);
+    // 切换色板时重置子集选择
+    setSelectedSubsetIndices(new Set());
   }, [state.currentPaletteId]);
 
   // 居中显示图案的回调
@@ -69,7 +78,11 @@ export default function Home() {
     if (!state.originalImage) return;
     dispatch({ type: 'SET_PROCESSING', payload: true });
     try {
-      const pattern = await processImage(state.originalImage, state.boardWidth, state.boardHeight);
+      // 如果启用了限色生成，传入子集索引
+      const subsetIndices = subsetEnabled && selectedSubsetIndices.size > 0
+        ? Array.from(selectedSubsetIndices)
+        : undefined;
+      const pattern = await processImage(state.originalImage, state.boardWidth, state.boardHeight, subsetIndices);
       if (state.autoRemoveBackground) {
         // 保存去背景前的 grid，以便 toggle 恢复
         preRemovalGridRef.current = pattern.grid.map(r => [...r]);
@@ -83,7 +96,7 @@ export default function Home() {
     } catch {
       dispatch({ type: 'SET_PROCESSING', payload: false });
     }
-  }, [state.originalImage, state.boardWidth, state.boardHeight, state.autoRemoveBackground, dispatch]);
+  }, [state.originalImage, state.boardWidth, state.boardHeight, state.autoRemoveBackground, subsetEnabled, selectedSubsetIndices, dispatch]);
 
   // 杂色消除：基于当前画布最新状态执行
   const handleDenoise = useCallback(() => {
@@ -208,6 +221,44 @@ export default function Home() {
   const handleClearHighlight = useCallback(() => {
     dispatch({ type: 'CLEAR_HIGHLIGHT_COLOR' });
   }, [dispatch]);
+
+  // 色板子集操作回调
+  const handleToggleSubsetEnabled = useCallback(() => {
+    setSubsetEnabled(prev => !prev);
+  }, []);
+
+  const handleToggleSubsetColor = useCallback((index: number) => {
+    setSelectedSubsetIndices(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectAllSubset = useCallback(() => {
+    setSelectedSubsetIndices(new Set(currentColors.map((_, i) => i)));
+  }, [currentColors]);
+
+  const handleSelectNoneSubset = useCallback(() => {
+    setSelectedSubsetIndices(new Set());
+  }, []);
+
+  const handleAutoLimit = useCallback(async (count: number) => {
+    if (!state.originalImage) return;
+    setIsAutoLimiting(true);
+    try {
+      const recommended = await autoLimitColors(state.originalImage, currentColors, count);
+      setSelectedSubsetIndices(new Set(recommended));
+    } catch (err) {
+      console.error('自动限色失败:', err);
+    } finally {
+      setIsAutoLimiting(false);
+    }
+  }, [state.originalImage, currentColors]);
 
   // 色板选择处理
   const handleSelectPalette = useCallback((paletteId: string) => {
@@ -347,6 +398,20 @@ export default function Home() {
               </div>
             </div>
           )}
+
+          {/* 色板子集选择（限色生成） */}
+          <PaletteSubsetSelector
+            colors={currentColors}
+            enabled={subsetEnabled}
+            selectedIndices={selectedSubsetIndices}
+            onToggleEnabled={handleToggleSubsetEnabled}
+            onToggleColor={handleToggleSubsetColor}
+            onSelectAll={handleSelectAllSubset}
+            onSelectNone={handleSelectNoneSubset}
+            onAutoLimit={handleAutoLimit}
+            isAutoLimiting={isAutoLimiting}
+            hasImage={!!state.originalImage}
+          />
 
           {/* Board config */}
           <BoardConfig

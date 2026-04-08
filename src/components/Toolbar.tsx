@@ -31,20 +31,24 @@ function ToolButton({ active, disabled, onClick, title, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      className={`p-1.5 rounded-md text-xs transition-colors ${
-        active
-          ? 'bg-blue-100 text-blue-700'
-          : disabled
-          ? 'text-gray-300 cursor-not-allowed'
-          : 'text-gray-600 hover:bg-gray-100'
-      }`}
-    >
-      {children}
-    </button>
+    <div className="relative group">
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        className={`p-1.5 rounded-md text-xs transition-colors ${
+          active
+            ? 'bg-blue-100 text-blue-700'
+            : disabled
+            ? 'text-gray-300 cursor-not-allowed'
+            : 'text-gray-600 hover:bg-gray-100'
+        }`}
+      >
+        {children}
+      </button>
+      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-1.5 px-2 py-1 rounded bg-gray-800 text-white text-[11px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity delay-0 group-hover:delay-200 z-50 shadow-lg">
+        {title}
+      </span>
+    </div>
   );
 }
 
@@ -135,9 +139,14 @@ export function Toolbar(props: ToolbarProps) {
       <ToolButton onClick={props.onZoomOut} title="缩小 (-)">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6" /></svg>
       </ToolButton>
-      <button onClick={props.onZoomReset} className="text-xs text-gray-500 px-1.5 min-w-[3rem] text-center hover:text-gray-700" title="重置缩放">
-        {Math.round(props.zoom * 100)}%
-      </button>
+      <div className="relative group">
+        <button onClick={props.onZoomReset} className="text-xs text-gray-500 px-1.5 min-w-[3rem] text-center hover:text-gray-700">
+          {Math.round(props.zoom * 100)}%
+        </button>
+        <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-1.5 px-2 py-1 rounded bg-gray-800 text-white text-[11px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity delay-0 group-hover:delay-200 z-50 shadow-lg">
+          重置缩放
+        </span>
+      </div>
       <ToolButton onClick={props.onZoomIn} title="放大 (+)">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" /></svg>
       </ToolButton>

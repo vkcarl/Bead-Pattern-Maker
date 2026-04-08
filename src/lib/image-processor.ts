@@ -1,5 +1,5 @@
 import type { Pattern, RGB } from '@/types';
-import { findNearestColor } from './color-match';
+import { findNearestColor, initSubsetMatcher, findNearestColorWithSubsetMatcher, clearSubsetMatcher } from './color-match';
 
 // Area-average downsampling: averages all source pixels that map to each target pixel
 // Returns null for fully transparent blocks
@@ -56,7 +56,8 @@ function downsample(
 export function processImage(
   imageDataUrl: string,
   targetWidth: number,
-  targetHeight: number
+  targetHeight: number,
+  subsetIndices?: number[] // 可选：色板子集索引，限色生成时使用
 ): Promise<Pattern> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -88,10 +89,24 @@ export function processImage(
         fitH
       );
 
-      // Map to palette colors
+      // 如果提供了子集索引，初始化子集匹配器
+      if (subsetIndices && subsetIndices.length > 0) {
+        initSubsetMatcher(subsetIndices);
+      }
+
+      // Map to palette colors（使用子集匹配器或全色板匹配器）
+      const colorMatcher = (subsetIndices && subsetIndices.length > 0)
+        ? findNearestColorWithSubsetMatcher
+        : findNearestColor;
+
       const fitGrid: number[][] = rgbGrid.map((row) =>
-        row.map((pixel) => pixel === null ? -1 : findNearestColor(pixel.r, pixel.g, pixel.b))
+        row.map((pixel) => pixel === null ? -1 : colorMatcher(pixel.r, pixel.g, pixel.b))
       );
+
+      // 清除子集匹配器
+      if (subsetIndices && subsetIndices.length > 0) {
+        clearSubsetMatcher();
+      }
 
       // Place centered in full target grid, padding with -1 (empty)
       const offsetX = Math.floor((targetWidth - fitW) / 2);

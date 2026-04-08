@@ -85,6 +85,93 @@ export function findNearestColor(r: number, g: number, b: number): number {
 }
 
 /**
+ * 在色板子集中查找最近的颜色
+ * 
+ * 用于限色生成：只在用户选中的颜色子集中查找最近色
+ * 返回的是子集颜色在完整色板中的原始索引
+ * 
+ * @param r - 红色分量 (0-255)
+ * @param g - 绿色分量 (0-255)
+ * @param b - 蓝色分量 (0-255)
+ * @param subsetIndices - 色板子集的索引数组（在完整色板中的索引）
+ * @returns 完整色板中最近颜色的索引
+ */
+export function findNearestColorInSubset(
+  r: number,
+  g: number,
+  b: number,
+  subsetIndices: number[]
+): number {
+  ensureInitialized();
+  
+  if (subsetIndices.length === 0) {
+    return findNearestColor(r, g, b);
+  }
+  
+  // 构建子集的 Lab 值和 k-d 树
+  const subsetLabValues = subsetIndices.map(idx => ({
+    lab: paletteLabValues[idx],
+    index: idx, // 保留原始索引
+  }));
+  
+  const subsetTree = new LabKDTree(subsetLabValues);
+  const lab = rgbToLab(r, g, b);
+  const result = subsetTree.nearest(lab);
+  
+  return result.index;
+}
+
+// 子集匹配器缓存（用于批量处理时避免重复构建 k-d 树）
+let subsetTree: LabKDTree | null = null;
+let subsetIndicesCache: number[] | null = null;
+const subsetColorCache = new Map<number, number>();
+
+/**
+ * 初始化子集匹配器（用于批量处理前调用，避免每次都重建 k-d 树）
+ */
+export function initSubsetMatcher(subsetIndices: number[]): void {
+  ensureInitialized();
+  
+  const subsetLabValues = subsetIndices.map(idx => ({
+    lab: paletteLabValues[idx],
+    index: idx,
+  }));
+  
+  subsetTree = new LabKDTree(subsetLabValues);
+  subsetIndicesCache = subsetIndices;
+  subsetColorCache.clear();
+}
+
+/**
+ * 使用已初始化的子集匹配器查找最近色（带缓存）
+ * 需要先调用 initSubsetMatcher
+ */
+export function findNearestColorWithSubsetMatcher(r: number, g: number, b: number): number {
+  if (!subsetTree) {
+    return findNearestColor(r, g, b);
+  }
+  
+  const key = quantizeKey(r, g, b);
+  const cached = subsetColorCache.get(key);
+  if (cached !== undefined) return cached;
+  
+  const lab = rgbToLab(r, g, b);
+  const result = subsetTree.nearest(lab);
+  
+  subsetColorCache.set(key, result.index);
+  return result.index;
+}
+
+/**
+ * 清除子集匹配器
+ */
+export function clearSubsetMatcher(): void {
+  subsetTree = null;
+  subsetIndicesCache = null;
+  subsetColorCache.clear();
+}
+
+/**
  * 获取当前色板中指定索引的颜色
  */
 export function getColor(index: number): BeadColor | undefined {
