@@ -1,5 +1,6 @@
-import type { Pattern, RGB } from '@/types';
+import type { Pattern, RGB, EdgeEnhanceMode } from '@/types';
 import { findNearestColor, initSubsetMatcher, findNearestColorWithSubsetMatcher, clearSubsetMatcher } from './color-match';
+import { sobelEdgeDetect, edgeAwareDownsample } from './edge-detect';
 
 // Area-average downsampling: averages all source pixels that map to each target pixel
 // Returns null for fully transparent blocks
@@ -57,7 +58,8 @@ export function processImage(
   imageDataUrl: string,
   targetWidth: number,
   targetHeight: number,
-  subsetIndices?: number[] // 可选：色板子集索引，限色生成时使用
+  subsetIndices?: number[], // 可选：色板子集索引，限色生成时使用
+  edgeEnhance: EdgeEnhanceMode = 'off' // 可选：轮廓强化模式
 ): Promise<Pattern> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -80,14 +82,33 @@ export function processImage(
       const fitW = Math.max(1, Math.round(img.width * scale));
       const fitH = Math.max(1, Math.round(img.height * scale));
 
-      // Downsample to fitted size
-      const rgbGrid = downsample(
-        imageData.data,
-        img.width,
-        img.height,
-        fitW,
-        fitH
-      );
+      // 根据轮廓强化模式选择降采样策略
+      let rgbGrid: (RGB | null)[][];
+
+      const useEdgeAware = edgeEnhance === 'edge-aware' || edgeEnhance === 'both';
+
+      if (useEdgeAware) {
+        // 边缘感知降采样：先做 Sobel 边缘检测，再用边缘权重引导降采样
+        const edgeMap = sobelEdgeDetect(imageData.data, img.width, img.height);
+        rgbGrid = edgeAwareDownsample(
+          imageData.data,
+          edgeMap,
+          img.width,
+          img.height,
+          fitW,
+          fitH,
+          80 // 边缘阈值
+        );
+      } else {
+        // 默认：区域平均降采样
+        rgbGrid = downsample(
+          imageData.data,
+          img.width,
+          img.height,
+          fitW,
+          fitH
+        );
+      }
 
       // 如果提供了子集索引，初始化子集匹配器
       if (subsetIndices && subsetIndices.length > 0) {

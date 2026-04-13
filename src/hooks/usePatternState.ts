@@ -1,6 +1,6 @@
 'use client';
 import { useReducer, useCallback } from 'react';
-import type { PatternState, PatternAction, Pattern, BrushShape } from '@/types';
+import type { PatternState, PatternAction, Pattern, BrushShape, EdgeEnhanceMode } from '@/types';
 import { DEFAULT_PALETTE_ID } from '@/data/palettes';
 import { removeBackground, floodErase } from '@/lib/flood-fill';
 
@@ -25,6 +25,7 @@ const initialState: PatternState = {
   currentPaletteId: DEFAULT_PALETTE_ID, // 当前选中的色板 ID
   autoRemoveBackground: false, // 默认关闭自动去除背景
   denoiseThreshold: 0, // 默认关闭杂色消除
+  edgeEnhance: 'off' as EdgeEnhanceMode, // 默认关闭轮廓强化
 };
 
 function patternReducer(state: PatternState, action: PatternAction): PatternState {
@@ -156,6 +157,8 @@ function patternReducer(state: PatternState, action: PatternAction): PatternStat
       if (truncatedHistory.length > MAX_HISTORY) truncatedHistory.shift();
       return { ...state, pattern: newPattern, history: truncatedHistory, historyIndex: truncatedHistory.length - 1 };
     }
+    case 'SET_EDGE_ENHANCE':
+      return { ...state, edgeEnhance: action.payload };
     case 'REPLACE_COLOR': {
       if (!state.pattern) return state;
       const { sourceIndex, targetIndex } = action.payload;

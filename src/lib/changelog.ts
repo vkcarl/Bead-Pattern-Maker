@@ -3,7 +3,7 @@
  * 每次发布新版本时，更新 APP_VERSION 并在 changelog 数组最前面添加新条目
  */
 
-export const APP_VERSION = '1.0.3';
+export const APP_VERSION = '1.0.4';
 
 export interface ChangelogEntry {
   version: string;
@@ -13,6 +13,15 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  {
+    version: '1.0.4',
+    date: '2026-04-13',
+    title: '轮廓强化（边缘感知）',
+    changes: [
+      '新增轮廓强化选项 — 边缘感知模式，缩小图片时自动保留线条和轮廓细节',
+      '基于 Sobel 边缘检测的智能降采样，边缘区域优先保留原始像素颜色',
+    ],
+  },
   {
     version: '1.0.3',
     date: '2026-04-08',

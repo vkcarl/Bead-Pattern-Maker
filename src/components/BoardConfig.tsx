@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import type { EdgeEnhanceMode } from '@/types';
 
 interface BoardConfigProps {
   width: number;
@@ -7,7 +8,9 @@ interface BoardConfigProps {
   hasImage: boolean;
   isProcessing: boolean;
   autoRemoveBackground: boolean;
+  edgeEnhance: EdgeEnhanceMode;
   onToggleAutoRemoveBg: () => void;
+  onEdgeEnhanceChange: (mode: EdgeEnhanceMode) => void;
   onSizeChange: (width: number, height: number) => void;
   onConvert: () => void;
 }
@@ -23,7 +26,12 @@ function clamp(v: number, min: number, max: number) {
   return Math.max(min, Math.min(max, v));
 }
 
-export function BoardConfig({ width, height, hasImage, isProcessing, autoRemoveBackground, onToggleAutoRemoveBg, onSizeChange, onConvert }: BoardConfigProps) {
+const EDGE_ENHANCE_OPTIONS: { value: EdgeEnhanceMode; label: string; desc: string }[] = [
+  { value: 'off', label: '关闭', desc: '不做轮廓强化' },
+{ value: 'edge-aware', label: '边缘感知', desc: '让线条和轮廓在缩小后依然清晰' },
+];
+
+export function BoardConfig({ width, height, hasImage, isProcessing, autoRemoveBackground, edgeEnhance, onToggleAutoRemoveBg, onEdgeEnhanceChange, onSizeChange, onConvert }: BoardConfigProps) {
   const [isCustom, setIsCustom] = useState(false);
   // Local string state so users can freely type/clear the input
   const [localW, setLocalW] = useState(String(width));
@@ -128,6 +136,30 @@ export function BoardConfig({ width, height, hasImage, isProcessing, autoRemoveB
           <span className="text-xs text-gray-600">自动去除背景</span>
         </label>
         <p className="text-[11px] text-gray-400 leading-tight pl-6">去除背景效果不佳时建议使用常用的修图软件将原图转为透明背景的png图片后再进行拼豆图案生成</p>
+      </div>
+      {/* 轮廓强化选项 */}
+      <div className="space-y-2">
+        <h4 className="text-xs font-medium text-gray-600">轮廓强化</h4>
+        <div className="grid grid-cols-2 gap-1.5">
+          {EDGE_ENHANCE_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => onEdgeEnhanceChange(opt.value)}
+              className={`px-2 py-1.5 text-[11px] rounded-md border transition-colors ${
+                edgeEnhance === opt.value
+                  ? 'border-purple-500 bg-purple-50 text-purple-700'
+                  : 'border-gray-200 hover:border-gray-300 text-gray-500'
+              }`}
+              title={opt.desc}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-[11px] text-gray-400 leading-tight">
+          {edgeEnhance === 'off' && '不做额外的轮廓处理'}
+{edgeEnhance === 'edge-aware' && '图片缩小为拼豆尺寸时，自动识别原图中的线条和轮廓，优先保留这些细节，避免它们被"糊掉"'}
+        </p>
       </div>
       <button
         onClick={onConvert}

@@ -11,7 +11,7 @@ import { exportPatternAsPDF } from '@/lib/export-pdf';
 import { exportPatternAsPNG, exportPatternWithCodesPNG } from '@/lib/export-image';
 import { PaletteManager, setActivePaletteById } from '@/lib/palette';
 import { autoLimitColors } from '@/lib/auto-limit-colors';
-import type { BrushShape } from '@/types';
+import type { BrushShape, EdgeEnhanceMode } from '@/types';
 
 import { ImageUploader } from '@/components/ImageUploader';
 import { BoardConfig } from '@/components/BoardConfig';
@@ -83,7 +83,8 @@ export default function Home() {
       const subsetIndices = subsetEnabled && selectedSubsetIndices.size > 0
         ? Array.from(selectedSubsetIndices)
         : undefined;
-      const pattern = await processImage(state.originalImage, state.boardWidth, state.boardHeight, subsetIndices);
+      // 传入轮廓强化模式
+      const pattern = await processImage(state.originalImage, state.boardWidth, state.boardHeight, subsetIndices, state.edgeEnhance);
       if (state.autoRemoveBackground) {
         // 保存去背景前的 grid，以便 toggle 恢复
         preRemovalGridRef.current = pattern.grid.map(r => [...r]);
@@ -97,7 +98,7 @@ export default function Home() {
     } catch {
       dispatch({ type: 'SET_PROCESSING', payload: false });
     }
-  }, [state.originalImage, state.boardWidth, state.boardHeight, state.autoRemoveBackground, subsetEnabled, selectedSubsetIndices, dispatch]);
+  }, [state.originalImage, state.boardWidth, state.boardHeight, state.autoRemoveBackground, state.edgeEnhance, subsetEnabled, selectedSubsetIndices, dispatch]);
 
   // 杂色消除：基于当前画布最新状态执行
   const handleDenoise = useCallback(() => {
@@ -421,7 +422,9 @@ export default function Home() {
             hasImage={!!state.originalImage}
             isProcessing={state.isProcessing}
             autoRemoveBackground={state.autoRemoveBackground}
+            edgeEnhance={state.edgeEnhance}
             onToggleAutoRemoveBg={() => dispatch({ type: 'TOGGLE_AUTO_REMOVE_BG' })}
+            onEdgeEnhanceChange={(mode: EdgeEnhanceMode) => dispatch({ type: 'SET_EDGE_ENHANCE', payload: mode })}
             onSizeChange={(w, h) => dispatch({ type: 'SET_BOARD_SIZE', payload: { width: w, height: h } })}
             onConvert={handleConvert}
           />

@@ -71,6 +71,9 @@ export interface BeadCount {
 /** 画笔形状：单点 / 整行 / 整列 / 九宫格 */
 export type BrushShape = 'dot' | 'row' | 'col' | 'grid3x3';
 
+/** 轮廓强化模式 */
+export type EdgeEnhanceMode = 'off' | 'edge-aware';
+
 export interface PatternState {
   originalImage: string | null;
   pattern: Pattern | null;
@@ -90,6 +93,7 @@ export interface PatternState {
   currentPaletteId: string; // 当前选中的色板 ID
   autoRemoveBackground: boolean; // 生成图案时是否自动去除背景
   denoiseThreshold: number; // 杂色消除阈值（CIEDE2000），0 表示关闭
+  edgeEnhance: EdgeEnhanceMode; // 轮廓强化模式
 }
 
 export type PatternAction =
@@ -118,4 +122,5 @@ export type PatternAction =
   | { type: 'TOGGLE_AUTO_REMOVE_BG' }
   | { type: 'SET_DENOISE_THRESHOLD'; payload: number }
   | { type: 'APPLY_DENOISE'; payload: number[][] }
-  | { type: 'REPLACE_COLOR'; payload: { sourceIndex: number; targetIndex: number } };
+  | { type: 'REPLACE_COLOR'; payload: { sourceIndex: number; targetIndex: number } }
+  | { type: 'SET_EDGE_ENHANCE'; payload: EdgeEnhanceMode };
