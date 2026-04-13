@@ -3,7 +3,7 @@
  * 每次发布新版本时，更新 APP_VERSION 并在 changelog 数组最前面添加新条目
  */
 
-export const APP_VERSION = '0.3.0';
+export const APP_VERSION = '1.0.3';
 
 export interface ChangelogEntry {
   version: string;
