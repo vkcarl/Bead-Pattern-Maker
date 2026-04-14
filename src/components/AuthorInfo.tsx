@@ -56,7 +56,10 @@ export function AuthorInfo() {
 
         {/* 悬浮弹出的二维码大图 */}
         {showQrCode && (
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 animate-in fade-in duration-200">
+          <div className="absolute z-50 animate-in fade-in duration-200
+            top-full mt-3 right-0
+            md:top-auto md:bottom-full md:mt-0 md:mb-3 md:right-auto md:left-1/2 md:-translate-x-1/2"
+          >
             <div className="relative bg-white rounded-xl shadow-2xl border border-gray-200 p-3 w-52">
               <img
                 src="/xiaohongshu-qrcode.jpg"
@@ -64,8 +67,10 @@ export function AuthorInfo() {
                 className="w-full h-auto rounded-lg"
               />
               <p className="text-center text-xs text-gray-400 mt-1.5">扫码关注小红书</p>
-              {/* 小三角箭头 */}
-              <div className="absolute left-1/2 -translate-x-1/2 -bottom-[6px] w-3 h-3 bg-white border-r border-b border-gray-200 rotate-45" />
+              {/* 小三角箭头 - 手机端在顶部，桌面端在底部 */}
+              <div className="absolute w-3 h-3 bg-white rotate-45
+                right-4 -top-[6px] border-l border-t border-gray-200
+                md:right-auto md:top-auto md:left-1/2 md:-translate-x-1/2 md:-bottom-[6px] md:border-l-0 md:border-t-0 md:border-r md:border-b" />
             </div>
           </div>
         )}
