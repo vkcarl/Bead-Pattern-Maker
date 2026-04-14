@@ -25,6 +25,8 @@ import { PaletteImporter } from '@/components/PaletteImporter';
 import { ColorReplacer } from '@/components/ColorReplacer';
 import { PaletteSubsetSelector } from '@/components/PaletteSubsetSelector';
 import { WhatsNewModal } from '@/components/WhatsNewModal';
+import { Footer } from '@/components/Footer';
+import { AuthorInfo } from '@/components/AuthorInfo';
 
 export default function Home() {
   const { state, dispatch, canUndo, canRedo, undo, redo } = usePatternState();
@@ -359,9 +361,15 @@ export default function Home() {
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
       <header className="flex items-center justify-between px-4 py-2 bg-white border-b shadow-sm flex-shrink-0">
-        <h1 className="text-base font-semibold text-gray-800">
-          拼豆图案转换器
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-base font-semibold text-gray-800">
+            拼豆图案转换器
+          </h1>
+          {/* 手机端在标题旁显示作者信息 */}
+          <div className="md:hidden">
+            <AuthorInfo />
+          </div>
+        </div>
         <span className="text-xs text-gray-400">{currentPalette.name}</span>
       </header>
 
@@ -614,6 +622,9 @@ export default function Home() {
 
       {/* 版本更新弹窗 */}
       <WhatsNewModal />
+
+      {/* 页脚 - 作者联系方式 */}
+      <Footer />
     </div>
   );
 }
