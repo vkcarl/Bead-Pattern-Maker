@@ -85,7 +85,7 @@ export function processImage(
       // 根据轮廓强化模式选择降采样策略
       let rgbGrid: (RGB | null)[][];
 
-      const useEdgeAware = edgeEnhance === 'edge-aware' || edgeEnhance === 'both';
+      const useEdgeAware = edgeEnhance === 'edge-aware';
 
       if (useEdgeAware) {
         // 边缘感知降采样：先做 Sobel 边缘检测，再用边缘权重引导降采样
