@@ -329,10 +329,31 @@ export default function Home() {
       if (e.key === '4' && !e.metaKey && !e.ctrlKey) {
         dispatch({ type: 'SET_BRUSH_SHAPE', payload: 'grid3x3' });
       }
+      // 空格键临时显示原图参考层（仅在未锁定时生效）
+      // 注意：必须始终阻止空格键默认行为（页面滚动），包括 repeat 事件
+      if (e.key === ' ' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        if (!e.repeat && state.pattern && state.originalImage && !state.referenceOverlayLocked) {
+          dispatch({ type: 'SET_REFERENCE_OVERLAY', payload: true });
+        }
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      // 松开空格键隐藏参考层（仅在未锁定时生效）
+      if (e.key === ' ') {
+        e.preventDefault();
+        if (!state.referenceOverlayLocked) {
+          dispatch({ type: 'SET_REFERENCE_OVERLAY', payload: false });
+        }
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, dispatch]);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [undo, redo, dispatch, state.pattern, state.originalImage, state.referenceOverlayLocked]);
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -536,6 +557,11 @@ export default function Home() {
                 onSelectBrushShape={(shape) => dispatch({ type: 'SET_BRUSH_SHAPE', payload: shape })}
                 backgroundRemoved={backgroundRemoved}
                 onToggleBackground={handleToggleBackground}
+                hasReferenceImage={!!state.originalImage}
+                referenceOverlayLocked={state.referenceOverlayLocked}
+                referenceOpacity={state.referenceOpacity}
+                onToggleReferenceLock={() => dispatch({ type: 'TOGGLE_REFERENCE_OVERLAY_LOCK' })}
+                onReferenceOpacityChange={(opacity) => dispatch({ type: 'SET_REFERENCE_OPACITY', payload: opacity })}
               />
               <div className="flex-1 overflow-hidden">
                 <BeadGrid
@@ -558,6 +584,9 @@ export default function Home() {
                   shouldCenter={state.shouldCenter}
                   onCentered={handleCentered}
                   scrollRef={scrollRef}
+                  referenceImage={state.originalImage}
+                  referenceOverlay={state.referenceOverlay}
+                  referenceOpacity={state.referenceOpacity}
                 />
               </div>
             </>
@@ -569,6 +598,7 @@ export default function Home() {
                 </svg>
                 <p className="text-sm">上传图片并点击「生成拼豆图案」开始</p>
                 <p className="text-xs text-gray-300">支持Ctrl(Win)/Cmd(Mac) + 滚轮缩放 / Shift + 滚轮水平平移 </p>
+                <p className="text-xs text-gray-300">长按空格可快速对照原图</p>
               </div>
             </div>
           )}

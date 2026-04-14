@@ -28,6 +28,10 @@ interface BeadGridProps {
   onCentered?: () => void;
   // 从外部传入的 scrollRef，以便与 useZoomPan 共享
   scrollRef: RefObject<HTMLDivElement | null>;
+  // 原图参考层
+  referenceImage?: string | null; // 原图 data URL
+  referenceOverlay?: boolean; // 是否显示参考层
+  referenceOpacity?: number; // 参考层透明度 (0~1)
 }
 
 const BASE_CELL_SIZE = 20;
@@ -54,8 +58,12 @@ export function BeadGrid({
   shouldCenter,
   onCentered,
   scrollRef,
+  referenceImage,
+  referenceOverlay = false,
+  referenceOpacity = 0.35,
 }: BeadGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const refImgRef = useRef<HTMLImageElement | null>(null);
   // 保存上一次的 zoom 值，用于检测 zoom 变化
   const prevZoomRef = useRef(zoom);
   // 标记是否正在进行缩放，用于跳过 scroll 事件导致的渲染
@@ -482,6 +490,124 @@ export function BeadGrid({
         }`}
         style={{ marginTop: -contentH }}
       />
+      {/* 原图参考层叠加 */}
+      {referenceOverlay && referenceImage && (
+        <ReferenceOverlay
+          src={referenceImage}
+          opacity={referenceOpacity}
+          cellSize={cellSize}
+          patternWidth={pattern.width}
+          patternHeight={pattern.height}
+          scrollRef={scrollRef}
+          contentH={contentH}
+          imgRef={refImgRef}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * 原图参考层叠加组件
+ * 将原图以半透明方式叠加在拼豆网格上方，帮助用户"对着原图画"
+ * 使用 sticky 定位与 Canvas 对齐，通过 CSS 控制透明度
+ * pointer-events: none 确保不干扰下方的绘制交互
+ */
+function ReferenceOverlay({
+  src,
+  opacity,
+  cellSize,
+  patternWidth,
+  patternHeight,
+  scrollRef,
+  contentH,
+  imgRef,
+}: {
+  src: string;
+  opacity: number;
+  cellSize: number;
+  patternWidth: number;
+  patternHeight: number;
+  scrollRef: RefObject<HTMLDivElement | null>;
+  contentH: number;
+  imgRef: React.MutableRefObject<HTMLImageElement | null>;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // 原图渲染到 canvas 上，与拼豆网格精确对齐
+  const render = useCallback(() => {
+    const canvas = canvasRef.current;
+    const scrollEl = scrollRef.current;
+    const img = imgRef.current;
+    if (!canvas || !scrollEl || !img || !img.complete) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const viewW = scrollEl.clientWidth;
+    const viewH = scrollEl.clientHeight;
+    canvas.width = viewW * dpr;
+    canvas.height = viewH * dpr;
+    canvas.style.width = `${viewW}px`;
+    canvas.style.height = `${viewH}px`;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, viewW, viewH);
+
+    // 计算偏移量（与 BeadGrid 的 render 逻辑一致）
+    const offsetX = -(scrollEl.scrollLeft - CANVAS_PADDING);
+    const offsetY = -(scrollEl.scrollTop - CANVAS_PADDING);
+
+    // 原图绘制区域 = 拼豆网格区域
+    const totalW = patternWidth * cellSize;
+    const totalH = patternHeight * cellSize;
+
+    ctx.save();
+    ctx.globalAlpha = opacity;
+    ctx.drawImage(img, offsetX, offsetY, totalW, totalH);
+    ctx.restore();
+  }, [cellSize, patternWidth, patternHeight, opacity, scrollRef, imgRef]);
+
+  // 加载原图
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => {
+      imgRef.current = img;
+      render();
+    };
+    img.src = src;
+  }, [src, imgRef, render]);
+
+  // 响应滚动和缩放重新渲染
+  useEffect(() => {
+    const animId = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(animId);
+  }, [render]);
+
+  // 监听滚动事件重新渲染
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+    const onScroll = () => requestAnimationFrame(render);
+    scrollEl.addEventListener('scroll', onScroll, { passive: true });
+    return () => scrollEl.removeEventListener('scroll', onScroll);
+  }, [render, scrollRef]);
+
+  // 监听窗口大小变化
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+    const observer = new ResizeObserver(() => requestAnimationFrame(render));
+    observer.observe(scrollEl);
+    return () => observer.disconnect();
+  }, [render, scrollRef]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="sticky top-0 left-0 pointer-events-none"
+      style={{ marginTop: -contentH, zIndex: 10 }}
+    />
   );
 }

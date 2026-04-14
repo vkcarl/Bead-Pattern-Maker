@@ -94,6 +94,9 @@ export interface PatternState {
   autoRemoveBackground: boolean; // 生成图案时是否自动去除背景
   denoiseThreshold: number; // 杂色消除阈值（CIEDE2000），0 表示关闭
   edgeEnhance: EdgeEnhanceMode; // 轮廓强化模式
+  referenceOverlay: boolean; // 是否显示原图参考层
+  referenceOpacity: number; // 参考层透明度 (0~1)
+  referenceOverlayLocked: boolean; // 参考层是否锁定常驻显示
 }
 
 export type PatternAction =
@@ -123,4 +126,7 @@ export type PatternAction =
   | { type: 'SET_DENOISE_THRESHOLD'; payload: number }
   | { type: 'APPLY_DENOISE'; payload: number[][] }
   | { type: 'REPLACE_COLOR'; payload: { sourceIndex: number; targetIndex: number } }
-  | { type: 'SET_EDGE_ENHANCE'; payload: EdgeEnhanceMode };
+  | { type: 'SET_EDGE_ENHANCE'; payload: EdgeEnhanceMode }
+  | { type: 'SET_REFERENCE_OVERLAY'; payload: boolean }
+  | { type: 'SET_REFERENCE_OPACITY'; payload: number }
+  | { type: 'TOGGLE_REFERENCE_OVERLAY_LOCK' };

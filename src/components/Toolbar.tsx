@@ -21,6 +21,12 @@ interface ToolbarProps {
   onSelectBrushShape: (shape: BrushShape) => void;
   backgroundRemoved: boolean;
   onToggleBackground: () => void;
+  // 原图参考层
+  hasReferenceImage?: boolean;
+  referenceOverlayLocked?: boolean;
+  referenceOpacity?: number;
+  onToggleReferenceLock?: () => void;
+  onReferenceOpacityChange?: (opacity: number) => void;
 }
 
 function ToolButton({ active, disabled, onClick, title, children }: {
@@ -160,6 +166,38 @@ export function Toolbar(props: ToolbarProps) {
       <ToolButton active={props.showBeadCodes} onClick={props.onToggleBeadCodes} title="显示编号">
         <span className="font-mono font-bold">A</span>
       </ToolButton>
+
+      {/* 原图参考层 */}
+      {props.hasReferenceImage && (
+        <>
+          <div className="w-px h-4 bg-gray-200 mx-1" />
+          <ToolButton
+            active={props.referenceOverlayLocked}
+            onClick={() => props.onToggleReferenceLock?.()}
+            title={props.referenceOverlayLocked ? '关闭参考层常驻显示' : '开启参考层常驻显示（或按住空格临时查看）'}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </ToolButton>
+          {props.referenceOverlayLocked && (
+            <div className="flex items-center gap-1 px-1">
+              <input
+                type="range"
+                min={5}
+                max={80}
+                step={5}
+                value={Math.round((props.referenceOpacity ?? 0.35) * 100)}
+                onChange={e => props.onReferenceOpacityChange?.(Number(e.target.value) / 100)}
+                className="w-16 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                title={`透明度 ${Math.round((props.referenceOpacity ?? 0.35) * 100)}%`}
+              />
+              <span className="text-[10px] text-gray-400 tabular-nums w-7">{Math.round((props.referenceOpacity ?? 0.35) * 100)}%</span>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

@@ -26,6 +26,9 @@ const initialState: PatternState = {
   autoRemoveBackground: false, // 默认关闭自动去除背景
   denoiseThreshold: 0, // 默认关闭杂色消除
   edgeEnhance: 'off' as EdgeEnhanceMode, // 默认关闭轮廓强化
+  referenceOverlay: false, // 默认隐藏参考层
+  referenceOpacity: 0.35, // 默认透明度 35%
+  referenceOverlayLocked: false, // 默认不锁定
 };
 
 function patternReducer(state: PatternState, action: PatternAction): PatternState {
@@ -159,6 +162,12 @@ function patternReducer(state: PatternState, action: PatternAction): PatternStat
     }
     case 'SET_EDGE_ENHANCE':
       return { ...state, edgeEnhance: action.payload };
+    case 'SET_REFERENCE_OVERLAY':
+      return { ...state, referenceOverlay: action.payload };
+    case 'SET_REFERENCE_OPACITY':
+      return { ...state, referenceOpacity: Math.max(0, Math.min(1, action.payload)) };
+    case 'TOGGLE_REFERENCE_OVERLAY_LOCK':
+      return { ...state, referenceOverlayLocked: !state.referenceOverlayLocked, referenceOverlay: !state.referenceOverlayLocked };
     case 'REPLACE_COLOR': {
       if (!state.pattern) return state;
       const { sourceIndex, targetIndex } = action.payload;

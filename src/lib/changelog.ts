@@ -3,7 +3,7 @@
  * 每次发布新版本时，更新 APP_VERSION 并在 changelog 数组最前面添加新条目
  */
 
-export const APP_VERSION = '1.0.4';
+export const APP_VERSION = '1.0.5';
 
 export interface ChangelogEntry {
   version: string;
@@ -13,6 +13,16 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  {
+    version: '1.0.5',
+    date: '2026-04-14',
+    title: '原图参考层叠加',
+    changes: [
+      '新增原图参考层 — 编辑时可对照原图进行二次创作',
+      '按住空格键临时显示原图，松开即隐藏',
+      '点击工具栏👁按钮可锁定常驻显示，支持透明度调节（5%~80%）',
+    ],
+  },
   {
     version: '1.0.4',
     date: '2026-04-13',
