@@ -1,8 +1,53 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import type { ColorPalette } from '@/types';
+import type { ColorPalette, BeadColor } from '@/types';
 import { PaletteManager } from '@/lib/palette';
+import { PALETTE_IDS } from '@/data/palettes';
+
+/**
+ * 为色板选取有代表性的展示色，用于 icon 差异化
+ * - Mard 295色：从珠光(P)、夜光(Q)、透明(R)、荧光(Y)、中国风(ZG) 中各取一色
+ * - Mard 221色：从基础系列中均匀取色（红、黄、绿、蓝、紫）
+ * - 其他色板：均匀采样
+ */
+function getRepresentativeColors(palette: ColorPalette, count: number): BeadColor[] {
+  const { colors, id } = palette;
+  if (colors.length === 0) return [];
+
+  if (id === PALETTE_IDS.MARD) {
+    // 295色：手动指定各特色系列中最具代表性的颜色
+    const representativeIds = ['P4', 'Q3', 'R8', 'Y1', 'ZG5'];
+    const picks = representativeIds
+      .map(tid => colors.find(c => c.id === tid))
+      .filter((c): c is BeadColor => c !== undefined);
+    // 如果不够，用前面的颜色补齐
+    while (picks.length < count) {
+      picks.push(colors[picks.length]);
+    }
+    return picks.slice(0, count);
+  }
+
+  if (id === PALETTE_IDS.MARD_221) {
+    // 221色：挑选视觉差异大的基础色（红、黄、绿、蓝、紫）
+    const targetIds = ['A4', 'B8', 'C15', 'D12', 'E10'];
+    const picks = targetIds
+      .map(tid => colors.find(c => c.id === tid))
+      .filter((c): c is BeadColor => c !== undefined);
+    while (picks.length < count) {
+      picks.push(colors[picks.length]);
+    }
+    return picks.slice(0, count);
+  }
+
+  // 其他色板：均匀采样
+  const step = Math.max(1, Math.floor(colors.length / count));
+  const picks: BeadColor[] = [];
+  for (let i = 0; i < count && i * step < colors.length; i++) {
+    picks.push(colors[i * step]);
+  }
+  return picks;
+}
 
 interface PaletteSelectorProps {
   currentPaletteId: string;
@@ -70,7 +115,7 @@ export function PaletteSelector({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="flex -space-x-1">
-                {currentPalette.colors.slice(0, 5).map((color, i) => (
+                {getRepresentativeColors(currentPalette, 5).map((color, i) => (
                   <div
                     key={i}
                     className="w-4 h-4 rounded-full border border-white"
@@ -116,7 +161,7 @@ export function PaletteSelector({
                 >
                   <div className="flex items-center gap-2">
                     <div className="flex -space-x-1">
-                      {palette.colors.slice(0, 4).map((color, i) => (
+                      {getRepresentativeColors(palette, 4).map((color, i) => (
                         <div
                           key={i}
                           className="w-3 h-3 rounded-full border border-white"

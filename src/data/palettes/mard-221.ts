@@ -1,10 +1,10 @@
 import type { BeadColor } from '@/types';
 
 /**
- * Mard 系列拼豆颜色
- * 共 295 色
+ * Mard 系列拼豆颜色（基础版）
+ * 共 221 色（A-M 系列）
  */
-export const mardColors: BeadColor[] = [
+export const mard221Colors: BeadColor[] = [
   { id: "A1", name: "奶油黄", hex: "#FAF5CD", r: 250, g: 245, b: 205 },
   { id: "A2", name: "象牙白", hex: "#FCFED6", r: 252, g: 254, b: 214 },
   { id: "A3", name: "柠檬黄", hex: "#FCFF92", r: 252, g: 255, b: 146 },
@@ -226,84 +226,4 @@ export const mardColors: BeadColor[] = [
   { id: "M13", name: "焦糖奶", hex: "#C79266", r: 199, g: 146, b: 102 },
   { id: "M14", name: "赤陶色", hex: "#C37463", r: 195, g: 116, b: 99 },
   { id: "M15", name: "水泥灰", hex: "#747D7A", r: 116, g: 125, b: 122 },
-  // P 系列 - 珠光色 (23色)
-  { id: "P1", name: "珠光白", hex: "#F9F9F9", r: 249, g: 249, b: 249 },
-  { id: "P2", name: "珠光灰", hex: "#ABABAB", r: 171, g: 171, b: 171 },
-  { id: "P3", name: "珠光绿", hex: "#B6DBAF", r: 182, g: 219, b: 175 },
-  { id: "P4", name: "珠光粉", hex: "#FEA2A3", r: 254, g: 162, b: 163 },
-  { id: "P5", name: "珠光橙", hex: "#EB903F", r: 235, g: 144, b: 63 },
-  { id: "P6", name: "珠光翠", hex: "#63CEA2", r: 99, g: 206, b: 162 },
-  { id: "P7", name: "珠光杏", hex: "#E79273", r: 231, g: 146, b: 115 },
-  { id: "P8", name: "珠光黄", hex: "#ECDB59", r: 236, g: 219, b: 89 },
-  { id: "P9", name: "珠光银", hex: "#DBD9DA", r: 219, g: 217, b: 218 },
-  { id: "P10", name: "珠光紫", hex: "#DBC7EA", r: 219, g: 199, b: 234 },
-  { id: "P11", name: "珠光米", hex: "#F1E9D4", r: 241, g: 233, b: 212 },
-  { id: "P12", name: "珠光冰", hex: "#E9EDEE", r: 233, g: 237, b: 238 },
-  { id: "P13", name: "珠光蓝", hex: "#ADCBF1", r: 173, g: 203, b: 241 },
-  { id: "P14", name: "珠光靛", hex: "#337BAD", r: 51, g: 123, b: 173 },
-  { id: "P15", name: "珠光墨绿", hex: "#668575", r: 102, g: 133, b: 117 },
-  { id: "P16", name: "珠光金", hex: "#FDC24E", r: 253, g: 194, b: 78 },
-  { id: "P17", name: "珠光橘", hex: "#FDA42E", r: 253, g: 164, b: 46 },
-  { id: "P18", name: "珠光肤", hex: "#FEBDA7", r: 254, g: 189, b: 167 },
-  { id: "P19", name: "珠光樱", hex: "#FFDEE9", r: 255, g: 222, b: 233 },
-  { id: "P20", name: "珠光桃", hex: "#FCBFD1", r: 252, g: 191, b: 209 },
-  { id: "P21", name: "珠光藕", hex: "#E8BEC2", r: 232, g: 190, b: 194 },
-  { id: "P22", name: "珠光棕粉", hex: "#DFAAA4", r: 223, g: 170, b: 164 },
-  { id: "P23", name: "珠光酱", hex: "#A3656A", r: 163, g: 101, b: 106 },
-  // Q 系列 - 夜光色 (5色)
-  { id: "Q1", name: "夜光粉", hex: "#F2A5E8", r: 242, g: 165, b: 232 },
-  { id: "Q2", name: "夜光黄绿", hex: "#E9EC91", r: 233, g: 236, b: 145 },
-  { id: "Q3", name: "夜光黄", hex: "#FFFF00", r: 255, g: 255, b: 0 },
-  { id: "Q4", name: "夜光白粉", hex: "#FFEBFA", r: 255, g: 235, b: 250 },
-  { id: "Q5", name: "夜光蓝", hex: "#76CEDE", r: 118, g: 206, b: 222 },
-  // R 系列 - 透明色 (28色)
-  { id: "R1", name: "透明红", hex: "#D40E1F", r: 212, g: 14, b: 31 },
-  { id: "R2", name: "透明玫红", hex: "#F13484", r: 241, g: 52, b: 132 },
-  { id: "R3", name: "透明橙", hex: "#FB852B", r: 251, g: 133, b: 43 },
-  { id: "R4", name: "透明黄", hex: "#F8ED33", r: 248, g: 237, b: 51 },
-  { id: "R5", name: "透明绿", hex: "#32C958", r: 50, g: 201, b: 88 },
-  { id: "R6", name: "透明翠", hex: "#1EBA93", r: 30, g: 186, b: 147 },
-  { id: "R7", name: "透明青", hex: "#1D779C", r: 29, g: 119, b: 156 },
-  { id: "R8", name: "透明蓝", hex: "#1960C8", r: 25, g: 96, b: 200 },
-  { id: "R9", name: "透明紫", hex: "#945AB1", r: 148, g: 90, b: 177 },
-  { id: "R10", name: "透明金黄", hex: "#F8DA54", r: 248, g: 218, b: 84 },
-  { id: "R11", name: "透明粉白", hex: "#FCECF7", r: 252, g: 236, b: 247 },
-  { id: "R12", name: "透明灰", hex: "#D8D4D3", r: 216, g: 212, b: 211 },
-  { id: "R13", name: "透明深灰", hex: "#56534E", r: 86, g: 83, b: 78 },
-  { id: "R14", name: "透明薄荷", hex: "#A3E7DC", r: 163, g: 231, b: 220 },
-  { id: "R15", name: "透明天蓝", hex: "#78CEE7", r: 120, g: 206, b: 231 },
-  { id: "R16", name: "透明湖蓝", hex: "#3FCDCE", r: 63, g: 205, b: 206 },
-  { id: "R17", name: "透明墨绿", hex: "#4E8379", r: 78, g: 131, b: 121 },
-  { id: "R18", name: "透明草绿", hex: "#7DCA9C", r: 125, g: 202, b: 156 },
-  { id: "R19", name: "透明黄绿", hex: "#C8E664", r: 200, g: 230, b: 100 },
-  { id: "R20", name: "透明米色", hex: "#E3CCBA", r: 227, g: 204, b: 186 },
-  { id: "R21", name: "透明棕", hex: "#A17140", r: 161, g: 113, b: 64 },
-  { id: "R22", name: "透明深棕", hex: "#6B372C", r: 107, g: 55, b: 44 },
-  { id: "R23", name: "透明杏黄", hex: "#F6BB6F", r: 246, g: 187, b: 111 },
-  { id: "R24", name: "透明肤粉", hex: "#F3C6C0", r: 243, g: 198, b: 192 },
-  { id: "R25", name: "透明砖红", hex: "#C76A62", r: 199, g: 106, b: 98 },
-  { id: "R26", name: "透明藕紫", hex: "#D093BC", r: 208, g: 147, b: 188 },
-  { id: "R27", name: "透明桃粉", hex: "#E58EAE", r: 229, g: 142, b: 174 },
-  { id: "R28", name: "透明蓝紫", hex: "#9F85CF", r: 159, g: 133, b: 207 },
-  // T 系列 - 特殊色 (1色)
-  { id: "T1", name: "透明白", hex: "#FCFDFF", r: 252, g: 253, b: 255 },
-  // Y 系列 - 荧光色 (9色)
-  { id: "Y1", name: "荧光粉", hex: "#FF6FB7", r: 255, g: 111, b: 183 },
-  { id: "Y2", name: "荧光橙", hex: "#FDB583", r: 253, g: 181, b: 131 },
-  { id: "Y3", name: "荧光绿", hex: "#D8FCA4", r: 216, g: 252, b: 164 },
-  { id: "Y4", name: "荧光蓝", hex: "#91DAFB", r: 145, g: 218, b: 251 },
-  { id: "Y5", name: "荧光紫", hex: "#E987EA", r: 233, g: 135, b: 234 },
-  { id: "Y6", name: "荧光杏", hex: "#F7D4B8", r: 247, g: 212, b: 184 },
-  { id: "Y7", name: "荧光黄", hex: "#F1FA7D", r: 241, g: 250, b: 125 },
-  { id: "Y8", name: "荧光翠", hex: "#5EE88C", r: 94, g: 232, b: 140 },
-  { id: "Y9", name: "荧光白紫", hex: "#F8F5FE", r: 248, g: 245, b: 254 },
-  // ZG 系列 - 中国风 (8色)
-  { id: "ZG1", name: "中国风藕粉", hex: "#DAABB3", r: 218, g: 171, b: 179 },
-  { id: "ZG2", name: "中国风驼色", hex: "#D6AA87", r: 214, g: 170, b: 135 },
-  { id: "ZG3", name: "中国风竹青", hex: "#C1BD8D", r: 193, g: 189, b: 141 },
-  { id: "ZG4", name: "中国风青瓷", hex: "#96B69F", r: 150, g: 182, b: 159 },
-  { id: "ZG5", name: "中国风靛蓝", hex: "#849DC6", r: 132, g: 157, b: 198 },
-  { id: "ZG6", name: "中国风天青", hex: "#94BFE2", r: 148, g: 191, b: 226 },
-  { id: "ZG7", name: "中国风桃粉", hex: "#E2A9D2", r: 226, g: 169, b: 210 },
-  { id: "ZG8", name: "中国风紫藤", hex: "#AB91C0", r: 171, g: 145, b: 192 },
 ];
