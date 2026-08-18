@@ -204,12 +204,12 @@ export default function Home() {
   );
 
   // Export handlers
-  const handleExportPDF = useCallback(async (beadSize: number) => {
-    if (state.pattern) await exportPatternAsPDF(state.pattern, currentColors, beadSize);
+  const handleExportPDF = useCallback(async (beadSizeMm: number) => {
+    if (state.pattern) await exportPatternAsPDF(state.pattern, currentColors, beadSizeMm);
   }, [state.pattern, currentColors]);
 
-  const handleExportPNG = useCallback((beadSize: number) => {
-    if (state.pattern) exportPatternWithCodesPNG(state.pattern, currentColors, beadSize);
+  const handleExportPNG = useCallback((cellSizePx: number) => {
+    if (state.pattern) exportPatternWithCodesPNG(state.pattern, currentColors, cellSizePx);
   }, [state.pattern, currentColors]);
 
   // 全局颜色替换处理
