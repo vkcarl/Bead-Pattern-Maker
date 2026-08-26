@@ -3,7 +3,7 @@
  * 每次发布新版本时，更新 APP_VERSION 并在 changelog 数组最前面添加新条目
  */
 
-export const APP_VERSION = '1.0.6';
+export const APP_VERSION = '1.0.7';
 
 export interface ChangelogEntry {
   version: string;
@@ -13,6 +13,14 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  {
+    version: '1.0.7',
+    date: '2026-08-26',
+    title: 'PNG 支持高清导出',
+    changes: [
+      'PNG 导出支持多档清晰度选择（标准 / 高清 / 超清），满足高清打印需求'
+    ],
+  },
   {
     version: '1.0.6',
     date: '2026-04-14',
