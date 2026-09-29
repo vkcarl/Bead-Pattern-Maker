@@ -3,7 +3,7 @@
  * 每次发布新版本时，更新 APP_VERSION 并在 changelog 数组最前面添加新条目
  */
 
-export const APP_VERSION = '1.0.7';
+export const APP_VERSION = '1.0.8';
 
 export interface ChangelogEntry {
   version: string;
@@ -13,6 +13,17 @@ export interface ChangelogEntry {
 }
 
 export const changelog: ChangelogEntry[] = [
+  {
+    version: '1.0.8',
+    date: '2026-09-29',
+    title: '画笔支持拖动连续涂色',
+    changes: [
+      '电脑端：按住鼠标左键拖动，经过的格子都会涂上颜色',
+      '手机端：长按 1 秒后拖动即可连续涂色，轻点仍为单格涂色',
+      '整行 / 整列 / 九宫格画笔同样支持拖动涂色',
+      '一次拖动只算一步，撤销时整笔一起撤回',
+    ],
+  },
   {
     version: '1.0.7',
     date: '2026-08-26',

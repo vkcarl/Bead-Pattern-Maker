@@ -13,6 +13,7 @@ body {
 canvas {
   user-select: none;
   -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* Scrollbar styling for sidebar */

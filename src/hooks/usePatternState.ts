@@ -29,6 +29,8 @@ const initialState: PatternState = {
   referenceOverlay: false, // 默认隐藏参考层
   referenceOpacity: 0.35, // 默认透明度 35%
   referenceOverlayLocked: false, // 默认不锁定
+  strokeActive: false,
+  strokeRecorded: false,
 };
 
 function patternReducer(state: PatternState, action: PatternAction): PatternState {
@@ -42,18 +44,10 @@ function patternReducer(state: PatternState, action: PatternAction): PatternStat
       // 生成新图案时，设置 shouldCenter 为 true，触发居中显示
       return { ...state, pattern: action.payload, history: newHistory, historyIndex: 0, isProcessing: false, zoom: 1, shouldCenter: true };
     }
-    case 'SET_CELL': {
-      if (!state.pattern) return state;
-      const { row, col, colorIndex } = action.payload;
-      if (state.pattern.grid[row][col] === colorIndex) return state;
-      const newGrid = state.pattern.grid.map(r => [...r]);
-      newGrid[row][col] = colorIndex;
-      const newPattern: Pattern = { ...state.pattern, grid: newGrid };
-      const truncatedHistory = state.history.slice(0, state.historyIndex + 1);
-      truncatedHistory.push(newPattern);
-      if (truncatedHistory.length > MAX_HISTORY) truncatedHistory.shift();
-      return { ...state, pattern: newPattern, history: truncatedHistory, historyIndex: truncatedHistory.length - 1 };
-    }
+    case 'BEGIN_STROKE':
+      return { ...state, strokeActive: true, strokeRecorded: false };
+    case 'END_STROKE':
+      return { ...state, strokeActive: false, strokeRecorded: false };
     case 'SET_CELLS': {
       if (!state.pattern) return state;
       const { cells, colorIndex } = action.payload;
@@ -70,22 +64,34 @@ function patternReducer(state: PatternState, action: PatternAction): PatternStat
         }
       }
       const newPattern: Pattern = { ...state.pattern, grid: newGrid };
+      // 同一笔画内的后续修改合并到笔画的那条历史记录，一次拖动只占一步撤销
+      if (state.strokeActive && state.strokeRecorded) {
+        const mergedHistory = state.history.slice(0, state.historyIndex + 1);
+        mergedHistory[mergedHistory.length - 1] = newPattern;
+        return { ...state, pattern: newPattern, history: mergedHistory };
+      }
       const truncatedHistory = state.history.slice(0, state.historyIndex + 1);
       truncatedHistory.push(newPattern);
       if (truncatedHistory.length > MAX_HISTORY) truncatedHistory.shift();
-      return { ...state, pattern: newPattern, history: truncatedHistory, historyIndex: truncatedHistory.length - 1 };
+      return {
+        ...state,
+        pattern: newPattern,
+        history: truncatedHistory,
+        historyIndex: truncatedHistory.length - 1,
+        strokeRecorded: state.strokeActive,
+      };
     }
     case 'SET_BRUSH_SHAPE':
       return { ...state, brushShape: action.payload };
     case 'UNDO': {
       if (state.historyIndex <= 0) return state;
       const newIndex = state.historyIndex - 1;
-      return { ...state, pattern: state.history[newIndex], historyIndex: newIndex };
+      return { ...state, pattern: state.history[newIndex], historyIndex: newIndex, strokeRecorded: false };
     }
     case 'REDO': {
       if (state.historyIndex >= state.history.length - 1) return state;
       const newIndex = state.historyIndex + 1;
-      return { ...state, pattern: state.history[newIndex], historyIndex: newIndex };
+      return { ...state, pattern: state.history[newIndex], historyIndex: newIndex, strokeRecorded: false };
     }
     case 'SET_ZOOM':
       return { ...state, zoom: Math.max(0.1, Math.min(15, action.payload)) };

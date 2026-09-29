@@ -15,7 +15,9 @@ interface BeadGridProps {
   selectedColorIndex: number | null;
   highlightColorIndex: number | null; // 高亮颜色索引（仅取色笔设置）
   brushShape: BrushShape;
-  onCellClick: (row: number, col: number) => void;
+  onPaint: (points: Cell[]) => void; // 画笔涂色，points 为轨迹经过的格子
+  onPaintStrokeStart: () => void; // 一次笔画开始（按下 / 长按生效）
+  onPaintStrokeEnd: () => void; // 一次笔画结束（松开）
   onEyedropperPick?: (colorIndex: number) => void; // 取色笔取色回调
   onFloodErase?: (row: number, col: number) => void; // 色块消除回调
   onWheel: (e: WheelEvent) => void; // 改为原生 WheelEvent
@@ -37,6 +39,32 @@ interface BeadGridProps {
 const BASE_CELL_SIZE = 20;
 // 无限画布：在图案周围添加大量虚拟空间，支持自由滚动
 const CANVAS_PADDING = 2000;
+// 触屏长按多久进入连续涂色
+const LONG_PRESS_MS = 1000;
+// 长按判定期间手指移动超过该距离视为滚动，取消长按
+const TOUCH_MOVE_TOLERANCE = 10;
+
+type Cell = { row: number; col: number };
+
+// Bresenham 直线：返回 from → to 经过的所有格子（含两端），避免快速拖动时漏格
+function lineCells(from: Cell, to: Cell): Cell[] {
+  const cells: Cell[] = [];
+  let x = from.col;
+  let y = from.row;
+  const dx = Math.abs(to.col - x);
+  const dy = -Math.abs(to.row - y);
+  const sx = x < to.col ? 1 : -1;
+  const sy = y < to.row ? 1 : -1;
+  let err = dx + dy;
+  while (true) {
+    cells.push({ row: y, col: x });
+    if (x === to.col && y === to.row) break;
+    const e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x += sx; }
+    if (e2 <= dx) { err += dx; y += sy; }
+  }
+  return cells;
+}
 
 export function BeadGrid({
   pattern,
@@ -48,7 +76,9 @@ export function BeadGrid({
   selectedColorIndex,
   highlightColorIndex,
   brushShape,
-  onCellClick,
+  onPaint,
+  onPaintStrokeStart,
+  onPaintStrokeEnd,
   onEyedropperPick,
   onFloodErase,
   onWheel,
@@ -388,76 +418,205 @@ export function BeadGrid({
     return () => scrollEl.removeEventListener('wheel', handleWheel);
   }, [onWheel, scrollRef]);
 
-  // Canvas 上的鼠标移动事件，用于画笔预览高亮
-  const handleCanvasMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      if (selectedTool !== 'paint' || brushShape === 'dot') {
-        if (hoverCell) setHoverCell(null);
-        return;
-      }
+  // 屏幕坐标 → 格子坐标（可能超出图案范围）
+  const getCellFromClient = useCallback(
+    (clientX: number, clientY: number): Cell | null => {
       const scrollEl = scrollRef.current;
-      if (!scrollEl) return;
-
+      if (!scrollEl) return null;
       const rect = scrollEl.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-
       const offsetX = -(scrollEl.scrollLeft - CANVAS_PADDING);
       const offsetY = -(scrollEl.scrollTop - CANVAS_PADDING);
-
-      const col = Math.floor((mouseX - offsetX) / cellSize);
-      const row = Math.floor((mouseY - offsetY) / cellSize);
-
-      if (row >= 0 && row < pattern.height && col >= 0 && col < pattern.width) {
-        if (!hoverCell || hoverCell.row !== row || hoverCell.col !== col) {
-          setHoverCell({ row, col });
-        }
-      } else {
-        if (hoverCell) setHoverCell(null);
-      }
+      return {
+        col: Math.floor((clientX - rect.left - offsetX) / cellSize),
+        row: Math.floor((clientY - rect.top - offsetY) / cellSize),
+      };
     },
-    [selectedTool, brushShape, cellSize, pattern, scrollRef, hoverCell]
+    [cellSize, scrollRef]
   );
 
-  const handleCanvasMouseLeave = useCallback(() => {
-    if (hoverCell) setHoverCell(null);
-  }, [hoverCell]);
+  const isInPattern = useCallback(
+    (cell: Cell) => cell.row >= 0 && cell.row < pattern.height && cell.col >= 0 && cell.col < pattern.width,
+    [pattern.width, pattern.height]
+  );
 
-  // Click handler - identify cell from coordinates
+  // 画笔范围预览高亮（仅非单点画笔）
+  const updateHover = useCallback(
+    (clientX: number, clientY: number) => {
+      const cell = selectedTool === 'paint' && brushShape !== 'dot' ? getCellFromClient(clientX, clientY) : null;
+      const next = cell && isInPattern(cell) ? cell : null;
+      setHoverCell(prev => {
+        if (prev === next) return prev;
+        if (prev && next && prev.row === next.row && prev.col === next.col) return prev;
+        return next;
+      });
+    },
+    [selectedTool, brushShape, getCellFromClient, isInPattern]
+  );
+
+  const clearHover = useCallback(() => setHoverCell(null), []);
+
+  // ===== 画笔笔画：桌面端按下即画、拖动连续涂色；触屏端轻点单格、长按 1s 后拖动连续涂色 =====
+  const paintCallbacksRef = useRef({ onPaint, onPaintStrokeStart, onPaintStrokeEnd });
+  useEffect(() => {
+    paintCallbacksRef.current = { onPaint, onPaintStrokeStart, onPaintStrokeEnd };
+  }, [onPaint, onPaintStrokeStart, onPaintStrokeEnd]);
+
+  const strokeRef = useRef<{ pointerId: number; isTouch: boolean; last: Cell } | null>(null);
+  const pendingTouchRef = useRef<{ pointerId: number; x: number; y: number; cell: Cell; timer: number } | null>(null);
+  const activeTouchesRef = useRef(new Set<number>());
+
+  const paintPoints = useCallback(
+    (points: Cell[]) => {
+      const inside = points.filter(isInPattern);
+      if (inside.length > 0) paintCallbacksRef.current.onPaint(inside);
+    },
+    [isInPattern]
+  );
+
+  const startStroke = useCallback(
+    (pointerId: number, isTouch: boolean, cell: Cell) => {
+      paintCallbacksRef.current.onPaintStrokeStart();
+      strokeRef.current = { pointerId, isTouch, last: cell };
+      paintPoints([cell]);
+    },
+    [paintPoints]
+  );
+
+  const endStroke = useCallback(() => {
+    if (!strokeRef.current) return;
+    if (strokeRef.current.isTouch) setHoverCell(null);
+    strokeRef.current = null;
+    paintCallbacksRef.current.onPaintStrokeEnd();
+  }, []);
+
+  const cancelPendingTouch = useCallback(() => {
+    if (!pendingTouchRef.current) return;
+    window.clearTimeout(pendingTouchRef.current.timer);
+    pendingTouchRef.current = null;
+  }, []);
+
+  useEffect(() => () => cancelPendingTouch(), [cancelPendingTouch]);
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      if (selectedTool !== 'paint') return;
+
+      if (e.pointerType === 'touch') {
+        activeTouchesRef.current.add(e.pointerId);
+        // 多指操作（如双指缩放）不触发涂色
+        if (activeTouchesRef.current.size > 1 || strokeRef.current) {
+          cancelPendingTouch();
+          return;
+        }
+        const cell = getCellFromClient(e.clientX, e.clientY);
+        if (!cell) return;
+        const timer = window.setTimeout(() => {
+          const pending = pendingTouchRef.current;
+          pendingTouchRef.current = null;
+          if (!pending) return;
+          navigator.vibrate?.(15);
+          startStroke(pending.pointerId, true, pending.cell);
+        }, LONG_PRESS_MS);
+        pendingTouchRef.current = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, cell, timer };
+        return;
+      }
+
+      if (e.button !== 0 || e.altKey) return; // 中键 / Alt+拖动 为平移
+      const cell = getCellFromClient(e.clientX, e.clientY);
+      if (!cell) return;
+      // 阻止拖动时选中页面文字
+      e.preventDefault();
+      e.currentTarget.setPointerCapture(e.pointerId);
+      startStroke(e.pointerId, false, cell);
+    },
+    [selectedTool, getCellFromClient, startStroke, cancelPendingTouch]
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      const stroke = strokeRef.current;
+      if (e.pointerType !== 'touch' || stroke?.pointerId === e.pointerId) {
+        updateHover(e.clientX, e.clientY);
+      }
+
+      const pending = pendingTouchRef.current;
+      if (pending && pending.pointerId === e.pointerId) {
+        // 长按生效前移动视为滚动画布
+        if (Math.hypot(e.clientX - pending.x, e.clientY - pending.y) > TOUCH_MOVE_TOLERANCE) {
+          cancelPendingTouch();
+        }
+        return;
+      }
+
+      if (!stroke || stroke.pointerId !== e.pointerId) return;
+      const cell = getCellFromClient(e.clientX, e.clientY);
+      if (!cell || (cell.row === stroke.last.row && cell.col === stroke.last.col)) return;
+      paintPoints(lineCells(stroke.last, cell).slice(1));
+      stroke.last = cell;
+    },
+    [updateHover, cancelPendingTouch, getCellFromClient, paintPoints]
+  );
+
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      activeTouchesRef.current.delete(e.pointerId);
+      const pending = pendingTouchRef.current;
+      if (pending && pending.pointerId === e.pointerId) {
+        // 未到长按时间就松开：视为轻点，只画一格
+        cancelPendingTouch();
+        startStroke(pending.pointerId, true, pending.cell);
+        endStroke();
+        return;
+      }
+      if (strokeRef.current?.pointerId === e.pointerId) endStroke();
+    },
+    [cancelPendingTouch, startStroke, endStroke]
+  );
+
+  const handlePointerCancel = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      activeTouchesRef.current.delete(e.pointerId);
+      if (pendingTouchRef.current?.pointerId === e.pointerId) cancelPendingTouch();
+      if (strokeRef.current?.pointerId === e.pointerId) endStroke();
+    },
+    [cancelPendingTouch, endStroke]
+  );
+
+  // 触屏连续涂色时阻止画布滚动；需非 passive 监听才能 preventDefault
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const onTouchMove = (e: TouchEvent) => {
+      if (strokeRef.current?.isTouch) e.preventDefault();
+    };
+    canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => canvas.removeEventListener('touchmove', onTouchMove);
+  }, []);
+
+  // 长按期间屏蔽系统长按菜单
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    if (pendingTouchRef.current || strokeRef.current?.isTouch) e.preventDefault();
+  }, []);
+
+  // 取色笔 / 色块消除的点击处理（画笔由 pointer 事件处理）
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       if (e.altKey) return; // Alt+click is pan
-      const scrollEl = scrollRef.current;
-      if (!scrollEl) return;
+      if (selectedTool !== 'eyedropper' && selectedTool !== 'flood-erase') return;
+      const cell = getCellFromClient(e.clientX, e.clientY);
+      if (!cell || !isInPattern(cell)) return;
+      const { row, col } = cell;
 
-      const rect = scrollEl.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-
-      const offsetX = -(scrollEl.scrollLeft - CANVAS_PADDING);
-      const offsetY = -(scrollEl.scrollTop - CANVAS_PADDING);
-
-      const col = Math.floor((mouseX - offsetX) / cellSize);
-      const row = Math.floor((mouseY - offsetY) / cellSize);
-
-      if (row >= 0 && row < pattern.height && col >= 0 && col < pattern.width) {
-        // 取色笔工具：点击时获取该位置的颜色
-        if (selectedTool === 'eyedropper') {
-          const colorIndex = pattern.grid[row][col];
-          if (colorIndex >= 0 && colorIndex < colors.length && onEyedropperPick) {
-            onEyedropperPick(colorIndex);
-          }
-        } else if (selectedTool === 'flood-erase') {
-          // 色块消除工具：点击时消除连通同色豆子
-          if (onFloodErase) {
-            onFloodErase(row, col);
-          }
-        } else {
-          onCellClick(row, col);
+      if (selectedTool === 'eyedropper') {
+        const colorIndex = pattern.grid[row][col];
+        if (colorIndex >= 0 && colorIndex < colors.length && onEyedropperPick) {
+          onEyedropperPick(colorIndex);
         }
+      } else if (onFloodErase) {
+        onFloodErase(row, col);
       }
     },
-    [cellSize, pattern, colors, selectedTool, onCellClick, onEyedropperPick, onFloodErase, scrollRef]
+    [pattern, colors, selectedTool, getCellFromClient, isInPattern, onEyedropperPick, onFloodErase]
   );
 
   return (
@@ -467,14 +626,11 @@ export function BeadGrid({
       // 不使用 React onWheel，因为它是 passive 的，无法 preventDefault
       // wheel 事件在 useEffect 中通过原生 addEventListener 添加
       onMouseDown={onMouseDown}
-      onMouseMove={(e) => {
-        onMouseMove(e);
-        handleCanvasMouseMove(e);
-      }}
+      onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
       onMouseLeave={() => {
         onMouseUp();
-        handleCanvasMouseLeave();
+        clearHover();
       }}
     >
       {/* Spacer div to create scrollable area */}
@@ -483,6 +639,11 @@ export function BeadGrid({
       <canvas
         ref={canvasRef}
         onClick={handleClick}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+        onContextMenu={handleContextMenu}
         className={`sticky top-0 left-0 ${
           selectedTool === 'paint' ? 'cursor-crosshair' : 
           selectedTool === 'eyedropper' ? 'cursor-cell' :

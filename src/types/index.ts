@@ -97,14 +97,17 @@ export interface PatternState {
   referenceOverlay: boolean; // 是否显示原图参考层
   referenceOpacity: number; // 参考层透明度 (0~1)
   referenceOverlayLocked: boolean; // 参考层是否锁定常驻显示
+  strokeActive: boolean; // 是否处于一次画笔笔画中（按下到松开）
+  strokeRecorded: boolean; // 当前笔画是否已写入历史（后续修改合并到同一条记录）
 }
 
 export type PatternAction =
   | { type: 'SET_IMAGE'; payload: string }
   | { type: 'CLEAR_IMAGE' }
   | { type: 'GENERATE_PATTERN'; payload: Pattern }
-  | { type: 'SET_CELL'; payload: { row: number; col: number; colorIndex: number } }
   | { type: 'SET_CELLS'; payload: { cells: { row: number; col: number }[]; colorIndex: number } }
+  | { type: 'BEGIN_STROKE' }
+  | { type: 'END_STROKE' }
   | { type: 'SET_BRUSH_SHAPE'; payload: BrushShape }
   | { type: 'UNDO' }
   | { type: 'REDO' }

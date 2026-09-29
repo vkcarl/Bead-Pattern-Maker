@@ -25,6 +25,7 @@ import { PaletteImporter } from '@/components/PaletteImporter';
 import { ColorReplacer } from '@/components/ColorReplacer';
 import { PaletteSubsetSelector } from '@/components/PaletteSubsetSelector';
 import { WhatsNewModal } from '@/components/WhatsNewModal';
+import { PaintDragTip } from '@/components/PaintDragTip';
 import { Footer } from '@/components/Footer';
 import { AuthorInfo } from '@/components/AuthorInfo';
 
@@ -163,28 +164,22 @@ export default function Home() {
     [state.pattern]
   );
 
-  // Cell click handler (paint mode)
-  const handleCellClick = useCallback(
-    (row: number, col: number) => {
-      if (state.selectedTool === 'paint' && state.selectedColorIndex !== null) {
-        if (state.brushShape === 'dot') {
-          // 单点模式保持原来的逻辑
-          dispatch({
-            type: 'SET_CELL',
-            payload: { row, col, colorIndex: state.selectedColorIndex },
-          });
-        } else {
-          // 批量模式
-          const cells = getBrushCells(row, col, state.brushShape);
-          dispatch({
-            type: 'SET_CELLS',
-            payload: { cells, colorIndex: state.selectedColorIndex },
-          });
-        }
-      }
+  // 画笔涂色：points 为本次笔画轨迹经过的格子，每个格子按画笔形状展开
+  const handlePaint = useCallback(
+    (points: { row: number; col: number }[]) => {
+      if (state.selectedTool !== 'paint' || state.selectedColorIndex === null) return;
+      const cells = points.flatMap(({ row, col }) => getBrushCells(row, col, state.brushShape));
+      if (cells.length === 0) return;
+      dispatch({
+        type: 'SET_CELLS',
+        payload: { cells, colorIndex: state.selectedColorIndex },
+      });
     },
     [state.selectedTool, state.selectedColorIndex, state.brushShape, getBrushCells, dispatch]
   );
+
+  const handlePaintStrokeStart = useCallback(() => dispatch({ type: 'BEGIN_STROKE' }), [dispatch]);
+  const handlePaintStrokeEnd = useCallback(() => dispatch({ type: 'END_STROKE' }), [dispatch]);
 
   // 取色笔取色处理
   const handleEyedropperPick = useCallback(
@@ -571,7 +566,8 @@ export default function Home() {
                 onToggleReferenceLock={() => dispatch({ type: 'TOGGLE_REFERENCE_OVERLAY_LOCK' })}
                 onReferenceOpacityChange={(opacity) => dispatch({ type: 'SET_REFERENCE_OPACITY', payload: opacity })}
               />
-              <div className="flex-1 overflow-hidden">
+              <div className="relative flex-1 overflow-hidden">
+                <PaintDragTip active={state.selectedTool === 'paint'} />
                 <BeadGrid
                   pattern={state.pattern}
                   colors={currentColors}
@@ -582,7 +578,9 @@ export default function Home() {
                   selectedColorIndex={state.selectedColorIndex}
                   highlightColorIndex={state.highlightColorIndex}
                   brushShape={state.brushShape}
-                  onCellClick={handleCellClick}
+                  onPaint={handlePaint}
+                  onPaintStrokeStart={handlePaintStrokeStart}
+                  onPaintStrokeEnd={handlePaintStrokeEnd}
                   onEyedropperPick={handleEyedropperPick}
                   onFloodErase={handleFloodErase}
                   onWheel={onWheel}
